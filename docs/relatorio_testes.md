@@ -413,6 +413,31 @@ Isso aumenta o torque da gravidade (m·g·d_CG) e o momento de inércia. Junto c
 
 ---
 
+## 3.0 — Relatório parcial, simulação e repositório (2026-11-11)
+
+**Simulação (`simulacao/`)**
+- Modelo: haste em PLA (base do v2) + atuador medido (0 a 0,088 N, só para frente), PID por alocação de polos e θ_ref = 85°.
+- Cenário: a mão segura a haste em 82° de 0,5 a 2,0 s e solta, como na partida pelo B1.
+- Resultados no GNU Octave 9.2:
+
+  | Caso | θ máx. | Pico de I | Resultado |
+  |---|---|---|---|
+  | Sem anti-windup | 114° | 0,423 N | tomba |
+  | Integração limitada [0; 0,0705] N | 86,6° | — | recupera em 0,31 s |
+
+- Toques maiores que ~0,007 N·m derrubam a haste mesmo sem windup: o limite é o empuxo.
+- Modelo Simulink gerado por script (`cria_modelo_aeropendulo.m`). **Ainda não foi executado:** o MATLAB deste PC deu erro de licença −15 (servidor de licença de rede inacessível). Rodar `roda_simulink` no computador da UFBA.
+- **Achado:** o `I_MAX_DEFAULT = 0,40` do firmware é menor que F_h/F_max ≈ 0,46, necessário para sustentar 85°. Corrigir depois de identificar a curva de empuxo do v2 (valor sugerido ≈ 0,80).
+
+**Relatório parcial TP2 (`relatorio/`):** em LaTeX, compilado com MiKTeX (11 páginas). Falta a foto do protótipo: salvar como `relatorio/figuras/foto_prototipo.jpg` e recompilar.
+
+**Repositório git próprio na pasta do projeto**
+- O histórico do firmware foi reconstruído a partir das edições das sessões de 07 e 08/11: original → D10/D11 → eixos/5 V → botão B1 → sinal do motor → só para frente.
+- Cada estado foi recompilado sem avisos, e o tamanho de flash bate com o medido em cada etapa real (42 740 → 43 096 → 43 096 → 43 552 → 43 552 → 43 688 B).
+- As datas dos commits são as de hoje; a data real de cada mudança está na mensagem do commit.
+
+---
+
 ## Registros automáticos
 
 ### 2026-11-07 12:49 — `teste_bancada.py placa` (COM9) — APROVADO
