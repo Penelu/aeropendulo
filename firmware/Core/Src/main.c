@@ -52,7 +52,7 @@ static void print_help(void)
     serial_printf("  motor P           open-loop duty P%% (-100..100)\r\n");
     serial_printf("  ramp              duty ramp 10..100%% both directions\r\n");
     serial_printf("  dz P | msign S    dead-zone %% | motor sign (+1/-1)\r\n");
-    serial_printf("  dmax P            duty cap %% in every mode (55 = ~5 V from 9 V)\r\n");
+    serial_printf("  dmax P            duty cap %% in every mode (55 on a 9 V supply)\r\n");
     serial_printf("  run | stop        closed loop on | everything off\r\n");
     serial_printf("  ref D             reference angle in deg (90 = vertical)\r\n");
     serial_printf("  pid KP KI KD      gains (u per deg, per deg.s, per deg/s)\r\n");

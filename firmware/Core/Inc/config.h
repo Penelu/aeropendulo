@@ -27,11 +27,11 @@
  * SIDE : accelerometer axis perpendicular to the rod, in the swing plane
  * GYRO : gyroscope axis parallel to the pivot (line between the two feet)
  */
-#define AXIS_UP_DEFAULT     0
+#define AXIS_UP_DEFAULT     2       /* measured on the rod: axes +z -y +x */
 #define SIGN_UP_DEFAULT     (+1)
 #define AXIS_SIDE_DEFAULT   1
-#define SIGN_SIDE_DEFAULT   (+1)
-#define AXIS_GYRO_DEFAULT   2
+#define SIGN_SIDE_DEFAULT   (-1)
+#define AXIS_GYRO_DEFAULT   0
 #define SIGN_GYRO_DEFAULT   (+1)
 
 /* ---- Angle estimation ---- */
@@ -50,7 +50,7 @@
 #define U_MIN_DEFAULT       (-1.0f)  /* actuator limits */
 #define U_MAX_DEFAULT       (+1.0f)
 #define DEADZONE_DEFAULT    0.15f    /* duty below which the fan does not spin */
-#define DUTY_MAX_DEFAULT    0.55f    /* hard duty cap: 55 % of 9 V ~ 5 V motor rating */
+#define DUTY_MAX_DEFAULT    1.00f    /* hard duty cap: 5 V regulated supply (use dmax 55 on 9 V) */
 #define FALL_LIMIT_DEG      30.0f    /* motor off if |theta - 90| > this */
 
 #endif /* CONFIG_H */
