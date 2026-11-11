@@ -75,6 +75,11 @@ static void button_update(void)
         stop_all();
         serial_printf("button: theta %.1f outside %.0f..%.0f, not started\r\n",
                       ang.theta, REF_MIN_DEG, REF_MAX_DEG);
+    } else if (pid.u_min >= 0.0f && ang.theta >= 90.0f) {
+        /* forward-only fan can only push theta up: gravity must pull it down */
+        stop_all();
+        serial_printf("button: theta %.1f >= 90 with forward-only fan, lean the other way\r\n",
+                      ang.theta);
     } else {
         stop_all();                     /* leaves imu/motor/ramp test modes */
         pid.ref = ang.theta;

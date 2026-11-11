@@ -38,7 +38,7 @@
 #define COMP_TAU_S          0.5f    /* complementary filter time constant */
 
 /* ---- Controller defaults (u is normalised: -1..+1 = full reverse..full forward) ---- */
-#define REF_DEFAULT_DEG     90.0f
+#define REF_DEFAULT_DEG     85.0f   /* forward-only fan: lean so the fan holds against gravity */
 #define REF_MIN_DEG         70.0f
 #define REF_MAX_DEG         110.0f
 #define BUTTON_DEBOUNCE_MS  50      /* B1: press = hold current angle / stop */
@@ -46,12 +46,12 @@
 #define KP_DEFAULT          0.120f  /* 1/deg       */
 #define KI_DEFAULT          0.300f  /* 1/(deg.s)   */
 #define KD_DEFAULT          0.010f  /* 1/(deg/s)   */
-#define I_MIN_DEFAULT       (-0.40f) /* limited integration bounds */
+#define I_MIN_DEFAULT       (0.0f)   /* limited integration bounds (no negative I: u >= 0) */
 #define I_MAX_DEFAULT       (+0.40f)
-#define U_MIN_DEFAULT       (-1.0f)  /* actuator limits */
+#define U_MIN_DEFAULT       (0.0f)   /* actuator limits: fan forward only (reversing overheats the L9110H) */
 #define U_MAX_DEFAULT       (+1.0f)
-#define DEADZONE_DEFAULT    0.15f    /* duty below which the fan does not spin */
-#define DUTY_MAX_DEFAULT    1.00f    /* hard duty cap: 5 V regulated supply (use dmax 55 on 9 V) */
+#define DEADZONE_DEFAULT    0.25f    /* duty below which the fan does not spin (starts at ~30 %) */
+#define DUTY_MAX_DEFAULT    0.90f    /* hard duty cap: 90 % on 5 V to limit the L9110H heating (55 on 9 V) */
 #define MOTOR_SIGN_DEFAULT  (-1)     /* measured: with +1 the fan pushed the rod into the fall */
 #define FALL_LIMIT_DEG      30.0f    /* motor off if |theta - 90| > this */
 
