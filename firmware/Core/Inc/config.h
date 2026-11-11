@@ -41,6 +41,7 @@
 #define REF_DEFAULT_DEG     90.0f
 #define REF_MIN_DEG         70.0f
 #define REF_MAX_DEG         110.0f
+#define BUTTON_DEBOUNCE_MS  50      /* B1: press = hold current angle / stop */
 /* starting point scaled from the anti-windup article model; tune on the rod */
 #define KP_DEFAULT          0.120f  /* 1/deg       */
 #define KI_DEFAULT          0.300f  /* 1/(deg.s)   */

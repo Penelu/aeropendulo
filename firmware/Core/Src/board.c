@@ -50,19 +50,30 @@ static void clock_init(void)
         error_handler();
 }
 
-/* LD2 (PA5) as a heartbeat LED */
+/* LD2 (PA5) as a heartbeat LED, B1 (PC13) as the user button */
 static void gpio_init(void)
 {
     GPIO_InitTypeDef g = {0};
 
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 
     g.Pin   = GPIO_PIN_5;
     g.Mode  = GPIO_MODE_OUTPUT_PP;
     g.Pull  = GPIO_NOPULL;
     g.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &g);
+
+    g.Pin  = GPIO_PIN_13;
+    g.Mode = GPIO_MODE_INPUT;
+    g.Pull = GPIO_PULLUP;              /* B1 pulls PC13 low when pressed */
+    HAL_GPIO_Init(GPIOC, &g);
+}
+
+bool board_button(void)
+{
+    return HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET;
 }
 
 /* USART2: PA2 = TX, PA3 = RX (connected to the ST-LINK virtual COM port) */

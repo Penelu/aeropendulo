@@ -137,7 +137,8 @@ Anote os resultados: eles vão para o relatório.
 | `motor P` | razão cíclica P % em malha aberta (−100…100) |
 | `ramp` | rampa de 10 a 100 % nos dois sentidos |
 | `dz P`, `msign ±1` | zona morta do motor, sinal do motor |
-| `dmax P` | teto da razão cíclica em todos os modos (padrão 55 %) |
+| `dmax P` | teto da razão cíclica em todos os modos (padrão 100 % com fonte de 5 V; use 55 com 9 V) |
+| botão azul B1 | parado: `ref` = θ atual e liga o controle (θ entre 70° e 110°); controlando: para tudo |
 | `run`, `stop` | liga o controle, desliga tudo |
 | `ref D` | referência em graus (70…110, 90 = vertical) |
 | `pid KP KI KD` | ganhos (u por grau, por grau·s, por grau/s) |

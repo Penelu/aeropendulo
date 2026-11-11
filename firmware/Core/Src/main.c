@@ -42,6 +42,47 @@ static void stop_all(void)
     mode = MODE_IDLE;
 }
 
+static void start_run(void)
+{
+    if (!imu_ok) {
+        serial_printf("IMU not found, cannot run\r\n");
+        return;
+    }
+    pid_reset(&pid);
+    mode = MODE_RUN;
+    serial_printf("run: ref %.1f\r\n", pid.ref);
+}
+
+/* user button B1 (polled every loop): idle -> hold the current angle, running -> stop */
+static void button_update(void)
+{
+    static bool pressed;
+    static int count;
+    bool now = board_button();
+
+    count = (now == pressed) ? 0 : count + 1;
+    if (count < BUTTON_DEBOUNCE_MS / LOOP_PERIOD_MS)
+        return;
+    pressed = now;
+    count = 0;
+    if (!pressed)
+        return;                         /* act on the press, not on the release */
+
+    if (mode == MODE_RUN) {
+        stop_all();
+        serial_printf("button: stopped\r\n");
+    } else if (ang.theta < REF_MIN_DEG || ang.theta > REF_MAX_DEG) {
+        stop_all();
+        serial_printf("button: theta %.1f outside %.0f..%.0f, not started\r\n",
+                      ang.theta, REF_MIN_DEG, REF_MAX_DEG);
+    } else {
+        stop_all();                     /* leaves imu/motor/ramp test modes */
+        pid.ref = ang.theta;
+        serial_printf("button: ");
+        start_run();
+    }
+}
+
 static void print_help(void)
 {
     serial_printf("\r\nAeropendulo - commands:\r\n");
@@ -59,6 +100,7 @@ static void print_help(void)
     serial_printf("  ilim MIN MAX      limited integration bounds (-1..1)\r\n");
     serial_printf("  ulim MIN MAX      actuator limits (-1..1)\r\n");
     serial_printf("  status            show settings\r\n");
+    serial_printf("  blue button B1    hold the current angle (ref = theta, run) | stop\r\n");
 }
 
 static void print_status(void)
@@ -181,13 +223,7 @@ static void handle_command(char *cmd)
         float lo = arg_f(NULL, &ok), hi = arg_f(NULL, &ok);
         if (ok) { pid.u_min = lo; pid.u_max = hi; }
     } else if (!strcmp(c, "run")) {
-        if (!imu_ok) {
-            serial_printf("IMU not found, cannot run\r\n");
-        } else {
-            pid_reset(&pid);
-            mode = MODE_RUN;
-            serial_printf("run: ref %.1f\r\n", pid.ref);
-        }
+        start_run();
     } else {
         serial_printf("unknown command '%s' (type help)\r\n", c);
         return;
@@ -260,6 +296,8 @@ int main(void)
                 }
             }
         }
+
+        button_update();
 
         switch (mode) {
         case MODE_RUN:
