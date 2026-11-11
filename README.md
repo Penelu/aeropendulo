@@ -1,14 +1,20 @@
 # Aeropêndulo — implementação (NUCLEO-L476RG)
 
-Haste de madeira com duas pontas arredondadas na base (tomba em um só eixo), ventilador QYF-749 (ponte H L9110H) o mais alto possível e Grove IMU 9DOF no topo. Controle PID com integração limitada (*anti-windup*), como no artigo.
+Haste com duas pontas arredondadas na base (tomba em um só eixo), ventilador QYF-749 (ponte H L9110H) o mais alto possível e IMU MPU-9250 (acelerômetro + giroscópio). Controle PID com integração limitada (*anti-windup*), como no artigo.
+
+**Estado atual (TP2, 11/11/2026):** protótipo v1 (haste de MDF) construído e ensaiado. O ventilador opera **só para frente** (`ulim 0 1`, teto `dmax 90`), com a haste inclinada abaixo da vertical (referência padrão de 85°). O equilíbrio ainda não foi obtido: o empuxo medido (9 gf) é baixo para a haste pesada, e o L9110H aquece. Os próximos passos são trocar o *driver* por um MOSFET e fazer uma haste leve (v2). Veja o relatório parcial em `relatorio/` e o diário de ensaios em `docs/relatorio_testes.md`.
 
 ```
 aeropendulo/
 ├── firmware/          projeto CMake + HAL (já inclui os drivers da ST)
-│   ├── Core/Inc/config.h   ← pinos, eixos da IMU, ganhos padrão
+│   ├── Core/Inc/config.h   ← pinos, eixos da IMU, ganhos e limites padrão
 │   └── Core/Src/           main.c, imu.c, motor.c, control.c, serial.c, board.c
 ├── app/aeropendulo_app.py  monitor no PC (gráfico, comandos, métricas, CSV)
-├── docs/ligacoes.png       diagrama de ligações
+├── app/teste_bancada.py    testes de bancada guiados (placa, imu, eixos, motor, sinal, botao, empuxo)
+├── docs/ligacoes.png       diagrama de ligações (versão inicial: ventilador em D5/D4)
+├── docs/relatorio_testes.md diário dos ensaios: medições, problemas e decisões
+├── simulacao/              modelo Simulink (gerado por script) e simulação em MATLAB/Octave
+├── relatorio/              relatório parcial (TP2) em LaTeX + PDF
 └── aeropendulo.bin         firmware já compilado (pronto para gravar)
 ```
 
@@ -38,7 +44,7 @@ O módulo do ventilador é especificado para **5 V** (motor DC pequeno, hélice 
 
 1. **Fonte de 12 V + regulador step-down (buck) ajustado em 5 V**, por exemplo um LM2596 ou MP1584, que custam poucos reais. É a solução mais estável, e a fonte de 12 V que você já está avaliando serve para isso.
 2. **Carregador USB de 5 V / 1 A ou mais**, com um cabo USB cortado.
-3. **Bateria de 9 V direto, só limitando a razão cíclica:** o firmware já limita a razão cíclica a 55 % (`dmax 55`, padrão; 55 % de 9 V ≈ 5 V em média) em todos os modos. Com fonte de 5 V regulada, use `dmax 100`. Uma bateria quadrada tem pouca capacidade e a tensão cai bastante com corrente, então o empuxo vai variar durante o ensaio. Serve só para um teste rápido.
+3. **Bateria de 9 V direto, só limitando a razão cíclica:** use `dmax 55` (55 % de 9 V ≈ 5 V em média), que limita a razão cíclica em todos os modos. O padrão do firmware é `dmax 90`, pensado para a fonte de 5 V. Uma bateria quadrada tem pouca capacidade e a tensão cai bastante com corrente, então o empuxo vai variar durante o ensaio. Serve só para um teste rápido.
 
 **Não** alimente o motor pelo pino 5V da Nucleo: a corrente de partida do motor derruba o USB e reinicia a placa.
 
@@ -51,7 +57,7 @@ O módulo do ventilador é especificado para **5 V** (motor DC pequeno, hélice 
 ## 2. Compilar e gravar
 
 ### Opção rápida: só gravar
-Conecte a Nucleo ao PC. Ela aparece como um pen drive chamado **NOD_L476RG**. Arraste o arquivo `aeropendulo.bin` para dentro dele; o LED pisca e a placa reinicia com o firmware novo.
+Conecte a Nucleo ao PC. Ela aparece como um pen drive chamado **NODE_L476RG**. Arraste o arquivo `aeropendulo.bin` para dentro dele; o LED pisca e a placa reinicia com o firmware novo.
 
 ### Compilar (para modificar o código)
 1. Instale o **STM32CubeCLT** (site da ST). Ele traz o compilador `arm-none-eabi-gcc`, o CMake, o Ninja e o STM32CubeProgrammer de uma vez.
@@ -61,7 +67,7 @@ Conecte a Nucleo ao PC. Ela aparece como um pen drive chamado **NOD_L476RG**. Ar
    cmake -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi.cmake
    cmake --build build
    ```
-4. Grave `build/aeropendulo.bin` arrastando para o NOD_L476RG, ou use:
+4. Grave `build/aeropendulo.bin` arrastando para o NODE_L476RG, ou use:
    `STM32_Programmer_CLI -c port=SWD -w build/aeropendulo.elf -v -rst`
 
 > Se preferir o STM32CubeIDE: crie um projeto vazio para a NUCLEO-L476RG **sem** gerar código pelo CubeMX e copie `Core/` para dentro dele. O caminho pelo CMake é mais simples.
@@ -137,7 +143,7 @@ Anote os resultados: eles vão para o relatório.
 | `motor P` | razão cíclica P % em malha aberta (−100…100) |
 | `ramp` | rampa de 10 a 100 % nos dois sentidos |
 | `dz P`, `msign ±1` | zona morta do motor, sinal do motor |
-| `dmax P` | teto da razão cíclica em todos os modos (padrão 100 % com fonte de 5 V; use 55 com 9 V) |
+| `dmax P` | teto da razão cíclica em todos os modos (padrão 90 % com fonte de 5 V; use 55 com 9 V) |
 | botão azul B1 | parado: `ref` = θ atual e liga o controle (θ entre 70° e 110°); controlando: para tudo |
 | `run`, `stop` | liga o controle, desliga tudo |
 | `ref D` | referência em graus (70…110, 90 = vertical) |
