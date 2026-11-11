@@ -2,9 +2,9 @@
  * config.h - Aeropendulo project settings (NUCLEO-L476RG)
  *
  * Wiring (Arduino header names printed on the Nucleo board):
- *   Grove IMU 9DOF : VCC -> 3V3, GND -> GND, SDA -> D14 (PB9), SCL -> D15 (PB8)
- *   Fan (L9110H)   : INA -> D5 (PB4, TIM3_CH1), INB -> D4 (PB5, TIM3_CH2)
- *                    VCC -> external 5 V supply, GND -> Nucleo GND (common ground!)
+ *   IMU (MPU-9250) : VCC -> 3V3, GND -> GND, SDA -> D14 (PB9), SCL -> D15 (PB8)
+ *   Fan (L9110H)   : INA -> D10 (PB6, TIM4_CH1), INB -> D11 (PA7, TIM3_CH2)
+ *                    VCC -> external supply, GND -> Nucleo GND (common ground!)
  *   PC             : USB cable of the Nucleo (ST-LINK virtual COM port, USART2)
  */
 #ifndef CONFIG_H
@@ -18,7 +18,7 @@
 /* ---- I2C ---- */
 #define I2C_TIMING_100K     0x10909CECu   /* 100 kHz with PCLK1 = 80 MHz */
 
-/* ---- PWM (TIM3 at 80 MHz, PSC = 0) ---- */
+/* ---- PWM (TIM3 and TIM4 at 80 MHz, PSC = 0) ---- */
 #define PWM_ARR             3999u   /* 80 MHz / 4000 = 20 kHz (inaudible) */
 
 /* ---- IMU axis mapping (can be changed at run time with "axes") ----
@@ -50,6 +50,7 @@
 #define U_MIN_DEFAULT       (-1.0f)  /* actuator limits */
 #define U_MAX_DEFAULT       (+1.0f)
 #define DEADZONE_DEFAULT    0.15f    /* duty below which the fan does not spin */
+#define DUTY_MAX_DEFAULT    0.55f    /* hard duty cap: 55 % of 9 V ~ 5 V motor rating */
 #define FALL_LIMIT_DEG      30.0f    /* motor off if |theta - 90| > this */
 
 #endif /* CONFIG_H */

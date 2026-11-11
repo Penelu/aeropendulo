@@ -1,5 +1,5 @@
 /*
- * board.c - clock, GPIO, UART2, I2C1 and TIM3 initialisation (HAL)
+ * board.c - clock, GPIO, UART2, I2C1 and fan PWM (TIM3, TIM4) initialisation (HAL)
  */
 #include "board.h"
 #include "config.h"
@@ -7,6 +7,7 @@
 UART_HandleTypeDef huart2;
 I2C_HandleTypeDef  hi2c1;
 TIM_HandleTypeDef  htim3;
+TIM_HandleTypeDef  htim4;
 
 void error_handler(void)
 {
@@ -117,40 +118,56 @@ static void i2c1_init(void)
     HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE);
 }
 
-/* TIM3 PWM 20 kHz: CH1 = PB4 (D5) -> INA, CH2 = PB5 (D4) -> INB */
-static void tim3_init(void)
+/* fan PWM at 20 kHz on two timers (no single timer reaches both pins):
+ *   INA -> D10 = PB6 = TIM4_CH1,  INB -> D11 = PA7 = TIM3_CH2 */
+static void pwm_init(TIM_HandleTypeDef *h, TIM_TypeDef *tim, uint32_t channel)
 {
-    GPIO_InitTypeDef g = {0};
     TIM_OC_InitTypeDef oc = {0};
 
-    __HAL_RCC_TIM3_CLK_ENABLE();
-    g.Pin       = GPIO_PIN_4 | GPIO_PIN_5;
-    g.Mode      = GPIO_MODE_AF_PP;
-    g.Pull      = GPIO_NOPULL;
-    g.Speed     = GPIO_SPEED_FREQ_LOW;
-    g.Alternate = GPIO_AF2_TIM3;
-    HAL_GPIO_Init(GPIOB, &g);
-
-    htim3.Instance           = TIM3;
-    htim3.Init.Prescaler     = 0;
-    htim3.Init.CounterMode   = TIM_COUNTERMODE_UP;
-    htim3.Init.Period        = PWM_ARR;
-    htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+    h->Instance               = tim;
+    h->Init.Prescaler         = 0;
+    h->Init.CounterMode       = TIM_COUNTERMODE_UP;
+    h->Init.Period            = PWM_ARR;
+    h->Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    h->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_PWM_Init(h) != HAL_OK)
         error_handler();
 
     oc.OCMode     = TIM_OCMODE_PWM1;
     oc.Pulse      = 0;
     oc.OCPolarity = TIM_OCPOLARITY_HIGH;
     oc.OCFastMode = TIM_OCFAST_DISABLE;
-    if (HAL_TIM_PWM_ConfigChannel(&htim3, &oc, TIM_CHANNEL_1) != HAL_OK)
+    if (HAL_TIM_PWM_ConfigChannel(h, &oc, channel) != HAL_OK)
         error_handler();
-    if (HAL_TIM_PWM_ConfigChannel(&htim3, &oc, TIM_CHANNEL_2) != HAL_OK)
-        error_handler();
+    HAL_TIM_PWM_Start(h, channel);
+}
 
-    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+static void fan_pwm_init(void)
+{
+    GPIO_InitTypeDef g = {0};
+
+    __HAL_RCC_TIM3_CLK_ENABLE();
+    __HAL_RCC_TIM4_CLK_ENABLE();
+    pwm_init(&htim4, TIM4, TIM_CHANNEL_1);
+    pwm_init(&htim3, TIM3, TIM_CHANNEL_2);
+
+    /* pins switched to the timers only after both outputs are at 0 % */
+    g.Mode      = GPIO_MODE_AF_PP;
+    g.Pull      = GPIO_NOPULL;
+    g.Speed     = GPIO_SPEED_FREQ_LOW;
+    g.Alternate = GPIO_AF2_TIM4;
+    g.Pin       = GPIO_PIN_6;
+    HAL_GPIO_Init(GPIOB, &g);
+    g.Alternate = GPIO_AF2_TIM3;
+    g.Pin       = GPIO_PIN_7;
+    HAL_GPIO_Init(GPIOA, &g);
+}
+
+/* duty of each H-bridge input, 0..PWM_ARR+1 */
+void board_fan_pwm(uint32_t ccr_a, uint32_t ccr_b)
+{
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, ccr_a);
+    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, ccr_b);
 }
 
 void board_init(void)
@@ -160,5 +177,5 @@ void board_init(void)
     gpio_init();
     uart2_init();
     i2c1_init();
-    tim3_init();
+    fan_pwm_init();
 }

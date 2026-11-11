@@ -8,9 +8,11 @@
 
 extern UART_HandleTypeDef huart2;   /* ST-LINK virtual COM port */
 extern I2C_HandleTypeDef  hi2c1;    /* IMU */
-extern TIM_HandleTypeDef  htim3;    /* fan PWM */
+extern TIM_HandleTypeDef  htim3;    /* fan PWM, INB */
+extern TIM_HandleTypeDef  htim4;    /* fan PWM, INA */
 
 void board_init(void);
 void error_handler(void);
+void board_fan_pwm(uint32_t ccr_a, uint32_t ccr_b);  /* INA, INB compare values */
 
 #endif /* BOARD_H */

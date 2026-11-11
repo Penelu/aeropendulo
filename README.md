@@ -20,12 +20,12 @@ aeropendulo/
 
 | Módulo | Pino do módulo | Nucleo (Arduino) | Pino do STM32 |
 |---|---|---|---|
-| Grove IMU 9DOF | VCC (vermelho) | 3V3 | — |
-| | GND (preto) | GND | — |
-| | SDA (branco) | D14 | PB9 (I2C1) |
-| | SCL (amarelo) | D15 | PB8 (I2C1) |
-| Ventilador QYF-749 | INA | D5 | PB4 (TIM3_CH1) |
-| | INB | D4 | PB5 (TIM3_CH2) |
+| IMU MPU-9250 | VCC | 3V3 | — |
+| | GND | GND | — |
+| | SDA | D14 | PB9 (I2C1) |
+| | SCL | D15 | PB8 (I2C1) |
+| Ventilador QYF-749 | INA | D10 | PB6 (TIM4_CH1) |
+| | INB | D11 | PA7 (TIM3_CH2) |
 | | VCC | **fonte externa +5 V** | — |
 | | GND | fonte (−) **e** GND da Nucleo | — |
 | PC | — | USB do ST-LINK | USART2 (PA2/PA3) |
@@ -38,7 +38,7 @@ O módulo do ventilador é especificado para **5 V** (motor DC pequeno, hélice 
 
 1. **Fonte de 12 V + regulador step-down (buck) ajustado em 5 V**, por exemplo um LM2596 ou MP1584, que custam poucos reais. É a solução mais estável, e a fonte de 12 V que você já está avaliando serve para isso.
 2. **Carregador USB de 5 V / 1 A ou mais**, com um cabo USB cortado.
-3. **Bateria de 9 V direto, só limitando a razão cíclica:** use o comando `ulim -0.55 0.55` (55 % de 9 V ≈ 5 V em média). Uma bateria quadrada tem pouca capacidade e a tensão cai bastante com corrente, então o empuxo vai variar durante o ensaio. Serve só para um teste rápido.
+3. **Bateria de 9 V direto, só limitando a razão cíclica:** o firmware já limita a razão cíclica a 55 % (`dmax 55`, padrão; 55 % de 9 V ≈ 5 V em média) em todos os modos. Com fonte de 5 V regulada, use `dmax 100`. Uma bateria quadrada tem pouca capacidade e a tensão cai bastante com corrente, então o empuxo vai variar durante o ensaio. Serve só para um teste rápido.
 
 **Não** alimente o motor pelo pino 5V da Nucleo: a corrente de partida do motor derruba o USB e reinicia a placa.
 
@@ -137,6 +137,7 @@ Anote os resultados: eles vão para o relatório.
 | `motor P` | razão cíclica P % em malha aberta (−100…100) |
 | `ramp` | rampa de 10 a 100 % nos dois sentidos |
 | `dz P`, `msign ±1` | zona morta do motor, sinal do motor |
+| `dmax P` | teto da razão cíclica em todos os modos (padrão 55 %) |
 | `run`, `stop` | liga o controle, desliga tudo |
 | `ref D` | referência em graus (70…110, 90 = vertical) |
 | `pid KP KI KD` | ganhos (u por grau, por grau·s, por grau/s) |

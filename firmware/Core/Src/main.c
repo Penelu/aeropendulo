@@ -52,6 +52,7 @@ static void print_help(void)
     serial_printf("  motor P           open-loop duty P%% (-100..100)\r\n");
     serial_printf("  ramp              duty ramp 10..100%% both directions\r\n");
     serial_printf("  dz P | msign S    dead-zone %% | motor sign (+1/-1)\r\n");
+    serial_printf("  dmax P            duty cap %% in every mode (55 = ~5 V from 9 V)\r\n");
     serial_printf("  run | stop        closed loop on | everything off\r\n");
     serial_printf("  ref D             reference angle in deg (90 = vertical)\r\n");
     serial_printf("  pid KP KI KD      gains (u per deg, per deg.s, per deg/s)\r\n");
@@ -69,8 +70,9 @@ static void print_status(void)
                   imu_axes.sign_side > 0 ? '+' : '-', 'x' + imu_axes.axis_side,
                   imu_axes.sign_gyro > 0 ? '+' : '-', 'x' + imu_axes.axis_gyro, ang.theta);
     serial_printf("pid: kp %.4f ki %.4f kd %.4f | ref %.1f\r\n", pid.kp, pid.ki, pid.kd, pid.ref);
-    serial_printf("ilim [%.2f %.2f] ulim [%.2f %.2f] dz %.0f%% msign %+d\r\n",
-                  pid.i_min, pid.i_max, pid.u_min, pid.u_max, motor_deadzone * 100, motor_sign);
+    serial_printf("ilim [%.2f %.2f] ulim [%.2f %.2f] dz %.0f%% msign %+d dmax %.0f%%\r\n",
+                  pid.i_min, pid.i_max, pid.u_min, pid.u_max, motor_deadzone * 100, motor_sign,
+                  motor_duty_max * 100);
 }
 
 static void i2c_scan(void)
@@ -79,7 +81,7 @@ static void i2c_scan(void)
     for (uint8_t a = 0x08; a < 0x78; a++)
         if (HAL_I2C_IsDeviceReady(&hi2c1, a << 1, 2, 5) == HAL_OK)
             serial_printf(" 0x%02X", a);
-    serial_printf("\r\n(ICM20600 = 0x69 or 0x68, AK09918 magnetometer = 0x0C)\r\n");
+    serial_printf("\r\n(MPU-9250 = 0x68, ICM20600 = 0x69 or 0x68)\r\n");
 }
 
 /* "+x" -> axis 0, sign +1 ; returns false on a bad token */
@@ -120,6 +122,10 @@ static void handle_command(char *cmd)
         serial_printf("stopped\r\n");
     } else if (!strcmp(c, "imu")) {
         stop_all();
+        if (!imu_ok) {
+            serial_printf("IMU not found, check wiring and reset the board\r\n");
+            return;
+        }
         imu_angle_reset(&ang, &raw);
         mode = MODE_IMU;
         serial_printf("I,ax,ay,az,gx,gy,gz,theta_acc,theta_gyro,theta\r\n");
@@ -146,7 +152,7 @@ static void handle_command(char *cmd)
             pid_reset(&pid);
             mode = MODE_OPEN;
             motor_set_raw(motor_sign * p / 100.0f);
-            serial_printf("duty %.0f%%\r\n", p);
+            serial_printf("duty %.0f%%\r\n", motor_duty() * 100);   /* after the cap */
         }
     } else if (!strcmp(c, "ramp")) {
         pid_reset(&pid);
@@ -156,6 +162,9 @@ static void handle_command(char *cmd)
     } else if (!strcmp(c, "dz")) {
         float p = arg_f(NULL, &ok);
         if (ok) motor_deadzone = fminf(fmaxf(p / 100.0f, 0.0f), 0.9f);
+    } else if (!strcmp(c, "dmax")) {
+        float p = arg_f(NULL, &ok);
+        if (ok) motor_duty_max = fminf(fmaxf(p / 100.0f, 0.0f), 1.0f);
     } else if (!strcmp(c, "msign")) {
         float s = arg_f(NULL, &ok);
         if (ok) motor_sign = (s < 0) ? -1 : 1;
