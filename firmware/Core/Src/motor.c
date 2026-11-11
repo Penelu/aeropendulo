@@ -11,7 +11,7 @@
 #include <math.h>
 
 float motor_deadzone = DEADZONE_DEFAULT;
-int   motor_sign = +1;
+int   motor_sign = MOTOR_SIGN_DEFAULT;
 float motor_duty_max = DUTY_MAX_DEFAULT;
 
 static float last_duty;

@@ -52,6 +52,7 @@
 #define U_MAX_DEFAULT       (+1.0f)
 #define DEADZONE_DEFAULT    0.15f    /* duty below which the fan does not spin */
 #define DUTY_MAX_DEFAULT    1.00f    /* hard duty cap: 5 V regulated supply (use dmax 55 on 9 V) */
+#define MOTOR_SIGN_DEFAULT  (-1)     /* measured: with +1 the fan pushed the rod into the fall */
 #define FALL_LIMIT_DEG      30.0f    /* motor off if |theta - 90| > this */
 
 #endif /* CONFIG_H */
