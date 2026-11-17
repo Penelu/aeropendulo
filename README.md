@@ -9,7 +9,7 @@ Haste com duas pontas arredondadas na base (tomba em um só eixo), ventilador QY
 
 Os próximos passos (protótipo v2):
 - trocar o *driver* por uma ponte H com MOSFETs e, se preciso, o motor;
-- fazer uma haste leve de PLA só com a IMU e o ventilador;
+- fazer uma haste leve (PLA ou peças de montar tipo Lego) só com a IMU e o ventilador;
 - deixar o resto fora da haste, ligado por um fio fino.
 
 O padrão do firmware é o modo só para frente (`ulim 0 1`), que poupa o L9110H. Para os dois sentidos, envie `ulim -1 1` e `ilim -0.4 0.8` pela serial.

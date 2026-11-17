@@ -82,7 +82,7 @@ def view_3d(ax):
     ax.text(0.04, -0.02, IMU_H + 0.01, 'IMU', color=IMU, fontsize=8, fontweight='bold')
     ax.text(0.04, 0.0, FAN_H + 0.05, 'ventilador', color=FAN, fontsize=8, fontweight='bold')
     ax.text(0.12, 0.03, 0.002, 'fio fino', color='#c0392b', fontsize=7)
-    ax.text(-0.02, 0.0, 0.12, 'haste\nPLA', fontsize=7, ha='right')
+    ax.text(-0.02, 0.0, 0.12, 'haste leve\n(PLA ou peças\ntipo Lego)', fontsize=7, ha='right')
 
     ax.set_xlim(-0.12, 0.32); ax.set_ylim(-0.12, 0.12); ax.set_zlim(0, 0.27)
     ax.set_box_aspect((0.44, 0.24, 0.27))

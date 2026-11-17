@@ -109,8 +109,9 @@ A Tabela~\ref{tab:evolucao} compara a ideação, o protótipo construído e o pr
 para a etapa final.
 
 \textbf{Estrutura.} É a mudança mais importante. No v2, só a IMU e o ventilador ficam presos a uma
-haste leve de PLA. Todo o resto (Nucleo, \textit{driver} e fonte) fica fora dela, ligado por um fio
-fino e o mais leve possível, para não perturbar a haste.
+haste leve. Ela pode ser impressa em PLA ou montada com peças de encaixe, como Lego Technic ou
+vigas perfuradas similares. Todo o resto (Nucleo, \textit{driver} e fonte) fica fora dela, ligado
+por um fio fino e o mais leve possível, para não perturbar a haste.
 
 \textbf{Atuador.} Continua \textbf{bidirecional}, para corrigir quedas para os dois lados. Os ensaios
 mostraram, porém, duas limitações do conjunto atual:
@@ -130,7 +131,7 @@ inversões.
 \toprule
 \textbf{Item} & \textbf{Ideação (TP1)} & \textbf{Protótipo v1 (construído)} & \textbf{Protótipo v2 (planejado)} \\
 \midrule
-Estrutura & PLA impresso em 3D & haste de MDF com a Nucleo, o \textit{driver} e os fios embarcados & haste leve de PLA só com IMU e ventilador; resto ligado por fio fino \\
+Estrutura & PLA impresso em 3D & haste de MDF com a Nucleo, o \textit{driver} e os fios embarcados & haste leve (PLA ou peças de montar tipo Lego) só com IMU e ventilador; resto ligado por fio fino \\
 Sensor & acelerômetro no topo & IMU MPU-9250 (acelerômetro + giroscópio), I\textsuperscript{2}C & mesma IMU, \textbf{perto do pivô} \\
 Atuador & motor DC + hélice & ventilador QYF-749 (5 V, hélice 75 mm) & ventilador atual ou motor com mais empuxo \\
 \textit{Driver} & ponte H L9110S & ponte H L9110H (aquece nas inversões) & ponte H com MOSFETs (ex.: TB6612FNG, DRV8871) \\
@@ -218,7 +219,16 @@ Serial com o PC & USB (ST-LINK) & USART2, 115200 8N1 \\
 
 A Figura~\ref{fig:v2} mostra a ideia do protótipo v2:
 \begin{itemize}
-  \item \textbf{Haste:} leve, impressa em PLA, levando só o ventilador no topo e a IMU perto do pivô.
+  \item \textbf{Haste:} leve, levando só o ventilador no topo e a IMU perto do pivô. Há duas opções
+    de material:
+    \begin{itemize}
+      \item \textbf{PLA impresso em 3D}, como no projeto do estudo de \textit{anti-windup};
+      \item \textbf{peças de montar}, como Lego Technic ou vigas perfuradas similares. Elas não exigem
+        impressão, montam-se em minutos e permitem mudar a altura do ventilador e da IMU sem refazer a
+        peça. São estruturas vazadas, com pouca massa por comprimento.
+    \end{itemize}
+    A escolha será feita pesando as duas montagens: vence a que der o menor produto $m\,h$
+    (Seção~\ref{sec:modelo}) com rigidez suficiente para não vibrar com o ventilador.
   \item \textbf{Posição da IMU:} perto do pivô, o acelerômetro sente menos a aceleração tangencial e a
     vibração do ventilador, e os fios dela fazem menos alavanca.
   \item \textbf{Fios:} um feixe fino e flexível sai da haste na altura do pivô e segue ao longo do eixo
@@ -230,8 +240,8 @@ A Figura~\ref{fig:v2} mostra a ideia do protótipo v2:
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{prototipo_v2.png}
-\caption{Conceito do protótipo v2. (a) Só a IMU e o ventilador ficam na haste de PLA, e o resto é
-ligado por um fio fino que sai na altura do pivô. (b) Plano de tombamento: empuxo nos dois sentidos
+\caption{Conceito do protótipo v2. (a) Só a IMU e o ventilador ficam na haste leve (PLA ou peças de
+montar), e o resto é ligado por um fio fino que sai na altura do pivô. (b) Plano de tombamento: empuxo nos dois sentidos
 (o reverso é mais fraco), ângulos $\theta$ e $\phi$, e alturas do centro de massa ($h$) e da
 hélice ($L$).}
 \label{fig:v2}
@@ -390,8 +400,8 @@ queda de cerca de 0,11~s.
 em uma peça real. Eles foram \textbf{estimados no modelo CAD} (desenho 3D) da haste em PLA projetada
 no estudo de \textit{anti-windup}: o \textit{software} de CAD calcula a massa, o centro de massa e o
 momento de inércia a partir do volume das peças e da densidade do PLA, somados às massas dos
-componentes. Esses valores servem de base para o v2 e serão medidos na peça impressa
-(Seção~\ref{sec:proximos}). Já os parâmetros do atuador foram \textbf{medidos} no protótipo v1.
+componentes. Esses valores servem de referência para o v2 e serão medidos na estrutura montada, seja
+em PLA ou em peças de montar (Seção~\ref{sec:proximos}). Já os parâmetros do atuador foram \textbf{medidos} no protótipo v1.
 
 \begin{table}[H]
 \centering\small
@@ -434,7 +444,8 @@ O maior desvio sustentável em cada lado é
   \end{cases}
   \label{eq:phimax}
 \end{equation}
-Mesmo com a haste leve de PLA, o ventilador atual só sustenta a haste entre $79^\circ$ e $94{,}9^\circ$.
+Mesmo com a haste leve do projeto em PLA, o ventilador atual só sustenta a haste entre $79^\circ$ e
+$94{,}9^\circ$.
 Se a haste passar desses ângulos, ela tomba.
 
 A expressão~\eqref{eq:phimax} também mostra o que fazer no protótipo v2:
@@ -726,7 +737,9 @@ Atuador & bidirecional, com inversões bruscas de sentido e intensidade sem aque
 
 \textbf{Estrutura (v2, Figura~\ref{fig:v2}).}
 \begin{itemize}
-  \item Haste leve em PLA impresso, só com a IMU, perto do pivô, e o ventilador no topo.
+  \item Haste leve, só com a IMU, perto do pivô, e o ventilador no topo. Montar uma versão em peças
+    de encaixe (Lego Technic ou similares) e outra em PLA impresso, pesar as duas e escolher a de menor
+    $m\,h$.
   \item Nucleo, \textit{driver} e fonte fora da haste, ligados por um fio fino e leve que sai na
     altura do pivô, ao longo do eixo de giro.
   \item O cabo USB deixa de ficar preso à haste.
@@ -734,7 +747,7 @@ Atuador & bidirecional, com inversões bruscas de sentido e intensidade sem aque
 
 \textbf{Identificação, sintonia e ensaios.}
 \begin{itemize}
-  \item Medir $m$, $h$ e $L$ na peça impressa, e obter $J$ pelo período de oscilação da haste
+  \item Medir $m$, $h$ e $L$ na estrutura montada, e obter $J$ pelo período de oscilação da haste
     pendurada como pêndulo simples.
   \item Medir as curvas de empuxo nos dois sentidos com o novo atuador, e a constante $\tau_m$
     (degrau de PWM).
@@ -754,7 +767,7 @@ Atuador & bidirecional, com inversões bruscas de sentido e intensidade sem aque
 \midrule
 11/11 & TP2: apresentação do protótipo v1 (funcional nos dois sentidos, sem se sustentar) \\
 17/11 -- 23/11 & escolha e compra do \textit{driver} e/ou motor; novas curvas de empuxo \\
-18/11 -- 25/11 & impressão e montagem da estrutura v2 (fiação externa fina) \\
+18/11 -- 25/11 & montagem da estrutura v2 (peças de montar ou PLA; fiação externa fina) \\
 24/11 -- 30/11 & identificação ($m$, $h$, $L$, $J$, $\tau_m$, curvas de empuxo); atualização do modelo \\
 30/11 -- 06/12 & sintonia do PID; ensaios com e sem \textit{anti-windup}; métricas no aplicativo \\
 07/12 -- 11/12 & TP3: relatório final (prazo 11/12) \\
