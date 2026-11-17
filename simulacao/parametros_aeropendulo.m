@@ -14,8 +14,8 @@ p.b     = 5e-4;       % viscous friction (N.m.s/rad)
 p.tau_m = 0.03;       % fan time constant (s), estimate
 p.phi_bat = 24*pi/180;% floor stop (rad from vertical)
 
-p.Fmax  = 9e-3*9.81;  % measured max thrust: 9 gf = 0.088 N at 90 % duty
-p.Fmin  = 0;          % forward only (reversing overheated the L9110H)
+p.Fmax  =  9e-3*9.81; % measured max thrust, strong spin direction: 9 gf = 0.088 N (90 % duty)
+p.Fmin  = -4e-3*9.81; % measured max thrust, reverse direction:    4 gf = 0.039 N
 
 % PID by pole placement on the linear model (same design as the article)
 K  = p.L/p.J;  a1 = p.b/p.J;  a0 = p.m*p.g*p.h/p.J;
@@ -26,19 +26,20 @@ p.Kd = (2*zeta*wn + alpha*wn - a1) / K;         % N.s/rad
 p.Ts = 5e-3;          % controller period (s), same as the firmware (200 Hz)
 
 % operating point and limited integration bounds
-p.theta_r   = 85;                       % reference (deg); fan holds against gravity
+p.theta_r   = 88;                       % reference (deg): slightly towards the strong side
 p.phi_r     = (p.theta_r - 90)*pi/180;  % reference as deviation from vertical (rad)
 p.Fh        = -p.m*p.g*p.h*sin(p.phi_r)/p.L;   % holding thrust at the reference (N)
-theta_range = [83 88];                  % operating range (deg)
+theta_range = [86 93];                  % operating range (deg); the weak reverse thrust
+                                        % only holds the rod up to ~4.9 deg past vertical
 Fh_range = p.m*p.g*p.h*sin((90 - theta_range)*pi/180) / p.L;   % holding thrust (N)
 mu = 0.25;                              % 25 % margin
-p.Imin = 0;                             % forward-only actuator
+p.Imin = max(p.Fmin, (1 + mu)*min(Fh_range));
 p.Imax = min(p.Fmax, (1 + mu)*max(Fh_range));
 
 % disturbances
 % (1) hand holding the rod below the reference, then releasing it: the way the
 %     prototype is started with button B1 (fan saturated while the hand holds it)
-p.hold_theta = 82;    % angle where the hand holds the rod (deg)
+p.hold_theta = 85;    % angle where the hand holds the rod (deg)
 p.hold_t0    = 0.5;   % hand grabs the rod (s)
 p.hold_t1    = 2.0;   % hand releases the rod (s)
 p.hold_k     = 1.0;   % hand stiffness (N.m/rad)

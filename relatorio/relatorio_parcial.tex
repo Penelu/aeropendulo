@@ -18,7 +18,7 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{arrows.meta,positioning,calc}
-\hypersetup{colorlinks,citecolor=black,filecolor=black,linkcolor=black,urlcolor=black}
+\hypersetup{colorlinks,citecolor=black,filecolor=black,linkcolor=black,urlcolor=blue!50!black}
 \graphicspath{{./figuras/}}
 \setlength{\parskip}{0.45em}
 \sisetup{output-decimal-marker={,}, group-minimum-digits=4}
@@ -36,11 +36,13 @@
   wire/.style={thick},
 }
 
+\newcommand{\repo}{\url{https://github.com/Penelu/aeropendulo}}
+
 % Photo of the prototype: put figuras/foto_prototipo.jpg (or .png) and recompile.
 \newcommand{\fotoprototipo}[1]{%
   \IfFileExists{figuras/foto_prototipo.jpg}{\includegraphics[height=#1]{foto_prototipo.jpg}}{%
   \IfFileExists{figuras/foto_prototipo.png}{\includegraphics[height=#1]{foto_prototipo.png}}{%
-  \fbox{\parbox[c][#1][c]{0.85\linewidth}{\centering\small\itshape
+  \fbox{\parbox[c][#1][c]{0.40\textwidth}{\centering\small\itshape
         Espaço para a foto do protótipo\\(salvar como \texttt{figuras/foto\_prototipo.jpg})}}}}}
 
 \begin{document}
@@ -55,45 +57,70 @@
   {\small Universidade Federal da Bahia -- Escola Politécnica}\\
   {\small ENGC54 -- Laboratório Integrado VI (Controle) -- Prof.\textsuperscript{a} Cristiane Paim}\\[3pt]
   {\small João Pedro Penelu \quad $\cdot$ \quad Davi Buente}\\
-  {\small 11 de novembro de 2026}
+  {\small 17 de novembro de 2026}
 \end{minipage}
 
 \vspace{10pt}
 \begin{center}
   {\LARGE\textbf{AeroPêndulo}}\\[2pt]
   {\large Controle do ângulo de uma haste por propulsão a hélice}\\[2pt]
-  {\normalsize\itshape Relatório parcial (TP2): protótipo, modelagem e \textit{anti-windup} atualizados}
+  {\normalsize\itshape Relatório parcial (TP2): protótipo, modelagem e \textit{anti-windup} atualizados}\\[4pt]
+  {\small Código, simulação e relatório: \repo}
 \end{center}
 \vspace{-4pt}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introdução}
 
-Este relatório parcial atualiza a proposta inicial do AeroPêndulo (TP1), uma haste apoiada no piso
-por dois pontos, que só tomba em um eixo e cujo ângulo é mantido por uma hélice, e o estudo de
-\textit{anti-windup} por integração limitada feito pela equipe (AS). Desde então, foi construído e
-ensaiado um primeiro protótipo (v1). Os ensaios confirmaram a arquitetura de controle e o
-\textit{firmware}, mas revelaram três limitações físicas do conjunto: empuxo muito menor que o
-previsto, aquecimento excessivo do \textit{driver} do motor e estrutura pesada demais.
+Este relatório parcial atualiza dois trabalhos anteriores da equipe:
+\begin{itemize}
+  \item a proposta inicial do AeroPêndulo (TP1): uma haste apoiada no piso por dois pontos, que só
+    tomba em um eixo e cujo ângulo é mantido por uma hélice;
+  \item o estudo de \textit{anti-windup} por integração limitada (AS).
+\end{itemize}
+Desde então, foi construído e ensaiado um primeiro protótipo (v1), apresentado no TP2 como
+\textbf{funcional nos dois sentidos}: o ventilador reage contra a inclinação para os dois lados.
+Mesmo assim, o protótipo \textbf{não consegue se sustentar sozinho}. Os ensaios confirmaram a
+arquitetura de controle e o \textit{firmware} e identificaram as causas:
+\begin{itemize}
+  \item o peso da estrutura e dos fios presos à haste, principalmente o cabo USB da Nucleo;
+  \item o empuxo baixo do ventilador, sobretudo no sentido reverso;
+  \item o aquecimento do \textit{driver} do motor nas inversões de sentido.
+\end{itemize}
 
-O relatório apresenta: o que mudou em relação à ideação (Seção~\ref{sec:evolucao}); o protótipo v1 e o
-\textit{firmware} (Seções~\ref{sec:prototipo} e~\ref{sec:firmware}); os ensaios de bancada e a análise
-em malha aberta (Seção~\ref{sec:ensaios}); a modelagem matemática com os parâmetros medidos
-(Seção~\ref{sec:modelo}); a revisão do \textit{anti-windup} para um atuador que só empurra em um
-sentido, com simulação e modelo em Simulink (Seções~\ref{sec:aw} e~\ref{sec:simulink}); os objetivos
-específicos do controlador (Seção~\ref{sec:objetivos}); e os próximos passos até a entrega final
-(Seção~\ref{sec:proximos}).
+O relatório está organizado assim:
+\begin{itemize}
+  \item mudanças em relação à ideação (Seção~\ref{sec:evolucao});
+  \item protótipos v1 e v2 e \textit{firmware} (Seções~\ref{sec:prototipo} e~\ref{sec:firmware});
+  \item ensaios de bancada e análise em malha aberta (Seção~\ref{sec:ensaios});
+  \item modelagem matemática com os parâmetros medidos (Seção~\ref{sec:modelo});
+  \item revisão do \textit{anti-windup} para o atuador real e modelo em Simulink
+    (Seções~\ref{sec:aw} e~\ref{sec:simulink});
+  \item objetivos específicos do controlador (Seção~\ref{sec:objetivos});
+  \item próximos passos até a entrega final (Seção~\ref{sec:proximos}).
+\end{itemize}
+Todo o código (\textit{firmware}, aplicativos, simulação e este relatório) está no repositório \repo.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Evolução da proposta}
 \label{sec:evolucao}
 
 A Tabela~\ref{tab:evolucao} compara a ideação, o protótipo construído e o protótipo planejado
-para a etapa final. A mudança mais importante é o \textbf{atuador unidirecional}: na ideação, o
-motor giraria nos dois sentidos para corrigir quedas para os dois lados. Na prática, o sentido
-reverso da hélice fornece menos da metade do empuxo e as inversões rápidas sobreaqueceram o
-\textit{driver}. A haste passa então a operar \textbf{levemente inclinada} ($\theta_{ref}<90^\circ$):
-a gravidade fornece a força de retorno e a hélice só empurra no sentido mais eficiente.
+para a etapa final.
+
+\textbf{Estrutura.} É a mudança mais importante. No v2, só a IMU e o ventilador ficam presos a uma
+haste leve de PLA. Todo o resto (Nucleo, \textit{driver} e fonte) fica fora dela, ligado por um fio
+fino e o mais leve possível, para não perturbar a haste.
+
+\textbf{Atuador.} Continua \textbf{bidirecional}, para corrigir quedas para os dois lados. Os ensaios
+mostraram, porém, duas limitações do conjunto atual:
+\begin{itemize}
+  \item o sentido reverso da hélice fornece menos da metade do empuxo;
+  \item as inversões bruscas de sentido e intensidade aquecem demais a ponte H L9110H.
+\end{itemize}
+Por isso, parte dos ensaios usou um modo temporário ``só para frente''. Para o v2, o
+\textit{driver} e, se necessário, o motor serão trocados por componentes que suportem essas
+inversões.
 
 \begin{table}[!htb]
 \centering\small
@@ -103,46 +130,42 @@ a gravidade fornece a força de retorno e a hélice só empurra no sentido mais 
 \toprule
 \textbf{Item} & \textbf{Ideação (TP1)} & \textbf{Protótipo v1 (construído)} & \textbf{Protótipo v2 (planejado)} \\
 \midrule
-Estrutura & PLA impresso em 3D & haste de MDF com a Nucleo e os fios embarcados & haste leve de PLA, só com IMU e ventilador \\
+Estrutura & PLA impresso em 3D & haste de MDF com a Nucleo, o \textit{driver} e os fios embarcados & haste leve de PLA só com IMU e ventilador; resto ligado por fio fino \\
 Sensor & acelerômetro no topo & IMU MPU-9250 (acelerômetro + giroscópio), I\textsuperscript{2}C & mesma IMU, \textbf{perto do pivô} \\
-Atuador & motor DC + hélice, bidirecional & ventilador QYF-749 (5 V, hélice 75 mm) & motor com mais empuxo (a avaliar) \\
-\textit{Driver} & ponte H L9110S & ponte H L9110H & MOSFET de nível lógico (sem ponte H) \\
-Sentido do empuxo & dois sentidos & só para frente ($u\ge 0$) & só para frente \\
-Alimentação do motor & fonte 3--6 V & bateria 9 V (descartada) $\rightarrow$ fonte 5 V / 2 A & fonte 5 V / 2 A \\
-Referência & $90^\circ$ (vertical) & $85^\circ$, ou o ângulo atual ao apertar o botão B1 & $83^\circ$ a $88^\circ$ \\
+Atuador & motor DC + hélice & ventilador QYF-749 (5 V, hélice 75 mm) & ventilador atual ou motor com mais empuxo \\
+\textit{Driver} & ponte H L9110S & ponte H L9110H (aquece nas inversões) & ponte H com MOSFETs (ex.: TB6612FNG, DRV8871) \\
+Sentido do empuxo & dois sentidos & dois sentidos (forte 9 gf, reverso 4 gf) & dois sentidos \\
+Alimentação do motor & fonte 3--6 V & bateria 9 V (descartada) $\rightarrow$ fonte 5 V / 2 A & fonte 5 V / 2 A, fora da haste \\
+Ligação com o PC & USB & cabo USB preso à haste & fio fino; Nucleo fora da haste \\
+Referência & $90^\circ$ (vertical) & ângulo atual ao apertar o botão B1 & $86^\circ$ a $93^\circ$ (serial ou B1) \\
 Controlador & PID digital & PID 200 Hz, D pelo giroscópio, integração limitada & idem, ganhos ajustados \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Protótipo construído (v1)}
+\section{Protótipos}
 \label{sec:prototipo}
 
-O protótipo v1 (Figura~\ref{fig:prototipo}a) usa uma haste de MDF apoiada no piso por duas pontas
-arredondadas. No topo ficam a IMU e o ventilador; a placa NUCLEO-L476RG e o módulo do motor foram
-presos à própria haste. A Figura~\ref{fig:prototipo}b mostra o projeto em PLA do estudo de
-\textit{anti-windup}, que serve de base para o protótipo v2.
+\subsection{Protótipo v1 (construído)}
+
+O protótipo v1 (Figura~\ref{fig:foto}) usa uma haste de MDF apoiada no piso por duas pontas
+arredondadas. No topo ficam a IMU e o ventilador. A placa NUCLEO-L476RG, o módulo do motor e os
+fios foram presos à própria haste, e o cabo USB da Nucleo sai dela até o PC.
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \fotoprototipo{6.0cm}
-  \caption{Protótipo v1 construído.}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\linewidth,height=6.0cm,keepaspectratio]{cad_prototipo_pla.png}
-  \caption{Projeto em PLA (base do v2).}
-\end{subfigure}
-\caption{(a) Protótipo v1; (b) modelo CAD da haste em PLA usado no estudo de \textit{anti-windup}.}
-\label{fig:prototipo}
+\fotoprototipo{6.0cm}
+\caption{Protótipo v1 construído e apresentado no TP2.}
+\label{fig:foto}
 \end{figure}
 
-A Figura~\ref{fig:ligacoes} e a Tabela~\ref{tab:pinos} mostram as ligações elétricas. A IMU é
-alimentada em 3,3~V pela Nucleo, e o motor por uma fonte externa de 5~V com terra comum. A Nucleo é
-alimentada pelo USB, que também leva a comunicação serial com o PC.
+A Figura~\ref{fig:ligacoes} e a Tabela~\ref{tab:pinos} mostram as ligações elétricas:
+\begin{itemize}
+  \item a IMU é alimentada em 3,3~V pela Nucleo;
+  \item o motor é alimentado por uma fonte externa de 5~V, com terra comum;
+  \item a Nucleo é alimentada pelo USB, que também leva a comunicação serial com o PC.
+\end{itemize}
 
 \begin{figure}[H]
 \centering
@@ -169,7 +192,8 @@ alimentada pelo USB, que também leva a comunicação serial com o PC.
   \draw[wire, dashed] (nuc.south) |- node[pos=0.7, below]{GND comum} (src.west);
   \draw[wire, {Latex}-{Latex}] (pc.east) -- node[above]{USB} node[below]{UART 115200} (nuc.west);
 \end{tikzpicture}
-\caption{Ligações do protótipo v1. PWM de 20~kHz nas duas entradas da ponte H.}
+\caption{Ligações do protótipo v1. PWM de 20~kHz nas duas entradas da ponte H: INA para um
+sentido de giro, INB para o outro.}
 \label{fig:ligacoes}
 \end{figure}
 
@@ -190,6 +214,29 @@ Serial com o PC & USB (ST-LINK) & USART2, 115200 8N1 \\
 \end{tabular}
 \end{table}
 
+\subsection{Protótipo v2 (planejado)}
+
+A Figura~\ref{fig:v2} mostra a ideia do protótipo v2:
+\begin{itemize}
+  \item \textbf{Haste:} leve, impressa em PLA, levando só o ventilador no topo e a IMU perto do pivô.
+  \item \textbf{Posição da IMU:} perto do pivô, o acelerômetro sente menos a aceleração tangencial e a
+    vibração do ventilador, e os fios dela fazem menos alavanca.
+  \item \textbf{Fios:} um feixe fino e flexível sai da haste na altura do pivô e segue ao longo do eixo
+    de giro. Assim, quando a haste tomba, o fio torce em vez de dobrar e quase não exerce torque.
+  \item \textbf{Eletrônica:} Nucleo, \textit{driver} e fonte ficam numa caixa fora da haste, e o cabo
+    USB deixa de pesar sobre ela.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{prototipo_v2.png}
+\caption{Conceito do protótipo v2. (a) Só a IMU e o ventilador ficam na haste de PLA, e o resto é
+ligado por um fio fino que sai na altura do pivô. (b) Plano de tombamento: empuxo nos dois sentidos
+(o reverso é mais fraco), ângulos $\theta$ e $\phi$, e alturas do centro de massa ($h$) e da
+hélice ($L$).}
+\label{fig:v2}
+\end{figure}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\textit{Firmware} e ferramentas}
 \label{sec:firmware}
@@ -197,22 +244,33 @@ Serial com o PC & USB (ST-LINK) & USART2, 115200 8N1 \\
 O \textit{firmware} (C, HAL da ST, sem RTOS) roda um laço fixo de 200~Hz ($T_s=5$~ms):
 \begin{enumerate}
   \item lê a IMU (±4~g, ±500~°/s, filtro interno de 41~Hz);
-  \item estima o ângulo com um filtro complementar,
-    $\hat\theta[k]=\alpha\big(\hat\theta[k-1]+\omega[k]T_s\big)+(1-\alpha)\,\theta_{acc}[k]$, com
-    $\theta_{acc}=\operatorname{atan2}(a_{up},a_{side})$ e constante de tempo de 0,5~s;
+  \item estima o ângulo com um filtro complementar:
+    \[
+      \hat\theta[k]=\alpha\big(\hat\theta[k-1]+\omega[k]T_s\big)+(1-\alpha)\,\theta_{acc}[k],
+      \qquad \theta_{acc}=\operatorname{atan2}(a_{up},a_{side}),
+    \]
+    com constante de tempo de 0,5~s;
   \item calcula o PID com o termo derivativo pela taxa do giroscópio e o integrador limitado
     (Seção~\ref{sec:aw});
   \item aplica a compensação de zona morta e o teto de razão cíclica, e envia telemetria a 50~Hz.
 \end{enumerate}
 
-Por segurança, o motor desliga em três situações: no comando \texttt{stop}, em erro de leitura da
-IMU e em queda ($|\theta-90^\circ|>30^\circ$). O botão B1 liga o controle tomando o ângulo atual como
-referência. Se o controle já estiver ligado, o mesmo botão funciona como parada de emergência. A
-referência, os ganhos, os limites do integrador e o teto de PWM podem ser alterados pela serial.
+\textbf{Segurança.} O motor desliga em três situações: no comando \texttt{stop}, em erro de leitura da
+IMU e em queda ($|\theta-90^\circ|>30^\circ$).
 
-Para tornar os ensaios reprodutíveis, foi criado um \textit{script} de bancada em Python
-(\texttt{teste\_bancada.py}). Cada etapa (placa, IMU, eixos, motor, sinal, botão e empuxo) é um
-teste guiado, com critérios numéricos de aprovação e registro automático dos resultados. Um
+\textbf{Botão B1.} Liga o controle tomando o ângulo atual como referência. Se o controle já estiver
+ligado, o mesmo botão funciona como parada de emergência.
+
+\textbf{Ajustes pela serial.} A referência, os ganhos, os limites do integrador, os limites do
+atuador e o teto de PWM podem ser alterados sem regravar a placa:
+\begin{itemize}
+  \item \texttt{ulim -1 1}: modo bidirecional, usado na apresentação do protótipo;
+  \item \texttt{ulim 0 1}: modo só para frente, que poupa o L9110H.
+\end{itemize}
+
+\textbf{Ferramentas.} Para tornar os ensaios reprodutíveis, foi criado um \textit{script} de bancada
+em Python (\texttt{teste\_bancada.py}). Cada etapa (placa, IMU, eixos, motor, sinal, botão e empuxo)
+é um teste guiado, com critérios numéricos de aprovação e registro automático dos resultados. Um
 aplicativo no PC mostra o ângulo, a referência e o sinal de controle em tempo real e exporta CSV.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -241,8 +299,8 @@ PWM aplicado $\times$ comandado (10--100\,\%) & iguais nos dois sentidos & OK \\
 Bateria 9~V com o motor em 55\,\% & 9~V $\rightarrow$ 5,9~V (queda de 34\,\%) & descartada \\
 Fonte 5~V com o motor em 100\,\% & 4,85~V (queda de 3\,\%) & OK \\
 Início do giro da hélice (5~V) & $\approx 30\,\%$ de razão cíclica nos dois sentidos & zona morta \\
-Empuxo máximo (90\,\%) & 9~gf (0,088~N) no sentido forte; 4~gf no outro & \textbf{baixo} \\
-Temperatura do módulo L9110H & muito quente após poucos segundos & \textbf{inviável} \\
+Empuxo máximo (90\,\%) & 9~gf (0,088~N) no sentido forte; 4~gf (0,039~N) no reverso & \textbf{baixo} \\
+Temperatura do módulo L9110H & muito quente após poucos segundos, pior nas inversões & \textbf{inviável} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -250,10 +308,14 @@ Temperatura do módulo L9110H & muito quente após poucos segundos & \textbf{inv
 \subsection{Curva de empuxo}
 
 O empuxo foi medido com uma balança de cozinha (resolução de 1~g), com o ventilador soprando para
-cima, em degraus de 10\,\% de razão cíclica (Figura~\ref{fig:empuxo}). A hélice é fortemente
-assimétrica: o sentido mais eficiente fornece mais que o dobro do empuxo do outro. Embora a
-hélice comece a girar em cerca de 30\,\%, o empuxo só passa de 1~g acima de 50 a 60\,\%. A curva tem
-forma aproximadamente quadrática, como esperado para uma hélice.
+cima, em degraus de 10\,\% de razão cíclica (Figura~\ref{fig:empuxo}).
+\begin{itemize}
+  \item \textbf{Assimetria:} a hélice é fortemente assimétrica, e o sentido mais eficiente fornece
+    mais que o dobro do empuxo do reverso.
+  \item \textbf{Faixa útil:} embora a hélice comece a girar em cerca de 30\,\%, o empuxo só passa de
+    1~g acima de 50 a 60\,\%.
+  \item \textbf{Forma da curva:} aproximadamente quadrática, como esperado para uma hélice.
+\end{itemize}
 
 \begin{figure}[H]
 \centering
@@ -262,33 +324,41 @@ forma aproximadamente quadrática, como esperado para uma hélice.
              xmin=25, xmax=95, ymin=-0.5, ymax=10, grid=major, legend pos=north west,
              legend style={font=\footnotesize}, tick label style={font=\footnotesize}]
   \addplot[blue!70!black, thick, mark=*] coordinates {(40,0) (50,1) (60,2) (70,3) (80,7) (90,9)};
-  \addlegendentry{sentido forte (usado no controle)}
+  \addlegendentry{sentido forte ($F>0$)}
   \addplot[red!70!black, thick, mark=square*] coordinates {(30,0) (40,0) (50,1) (60,1) (70,1) (80,3) (90,4)};
-  \addlegendentry{sentido oposto}
+  \addlegendentry{sentido reverso ($F<0$)}
 \end{axis}
 \end{tikzpicture}
 \caption{Curva de empuxo do ventilador QYF-749 a 5~V, acionado pelo L9110H (1~gf $=$ 9,81~mN).}
 \label{fig:empuxo}
 \end{figure}
 
-O empuxo baixo e o aquecimento têm uma causa comum provável: o L9110H é uma ponte H de
-transistores bipolares, com queda de tensão da ordem de 1~V e chaveamento lento para o PWM de
-20~kHz. Assim, o motor recebe bem menos que 5~V e o \textit{driver} dissipa a diferença.
+O empuxo baixo e o aquecimento têm uma causa comum provável. O L9110H é uma ponte H de transistores
+bipolares, com queda de tensão da ordem de 1~V e chaveamento lento para o PWM de 20~kHz. Assim, o
+motor recebe bem menos que 5~V e o \textit{driver} dissipa a diferença. Nas inversões, a corrente
+de frenagem do motor ainda girando agrava o aquecimento.
 
-\subsection{Malha aberta e primeiros ensaios em malha fechada}
+\subsection{Malha aberta e ensaios em malha fechada}
 
-Sem controle, a haste cai em menos de um segundo para qualquer lado, como prevê o modelo
-(polo instável, Seção~\ref{sec:modelo}). Nos primeiros ensaios em malha fechada, o ventilador
-empurrou a haste \textbf{a favor} da queda. Era realimentação positiva, causada pelo sinal do motor
-em relação ao ângulo, e foi corrigida no \textit{firmware} (\texttt{MOTOR\_SIGN\_DEFAULT}). Em
-seguida, as inversões de sentido do PID aqueceram muito o L9110H. Por isso o atuador passou a operar
-só para frente ($u\in[0,u_{max}]$), com teto de 90\,\% de razão cíclica.
+\textbf{Malha aberta.} Sem controle, a haste cai em menos de um segundo para qualquer lado, como
+prevê o modelo (polo instável, Seção~\ref{sec:modelo}).
 
-Com a haste de MDF, a Nucleo, os fios e o cabo USB embarcados, o empuxo disponível não foi
-suficiente para sustentar a haste. A análise da Seção~\ref{sec:modelo} mostra que essa conclusão é
-quantitativa: o torque máximo da hélice é pequeno diante do torque da gravidade de uma haste pesada.
-Por isso o equilíbrio em malha fechada ainda \textbf{não foi obtido} no protótipo v1, o que motivou
-o redesenho descrito na Seção~\ref{sec:proximos}.
+\textbf{Correção do sinal do motor.} Nos primeiros ensaios em malha fechada, o ventilador empurrou a
+haste \textbf{a favor} da queda. Era realimentação positiva, causada pelo sinal do motor em relação
+ao ângulo, e foi corrigida no \textit{firmware}.
+
+\textbf{Resultado.} O protótipo foi então apresentado como \textbf{funcional nos dois sentidos}: com o
+controle ligado, o ventilador reage à inclinação e empurra a haste de volta para os dois lados. A
+haste, porém, \textbf{não consegue se apoiar sozinha}:
+\begin{itemize}
+  \item \textbf{Torque da gravidade:} a haste de MDF com a Nucleo, o \textit{driver} e os fios
+    embarcados tem um torque de gravidade muito maior que o torque máximo da hélice
+    (Seção~\ref{sec:modelo}).
+  \item \textbf{Cabo USB:} o cabo da Nucleo, rígido e pesado, puxa a haste de forma variável e age
+    como uma perturbação permanente.
+  \item \textbf{Aquecimento do \textit{driver}:} as inversões aquecem o L9110H, o que limitou a duração
+    dos ensaios bidirecionais.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Modelagem matemática}
@@ -298,11 +368,16 @@ Seja $\phi=\theta-90^\circ$ o desvio em relação à vertical. A segunda lei de 
 em torno do eixo dos apoios e uma dinâmica de primeira ordem para o conjunto motor--hélice dão
 \begin{align}
   J\,\ddot\phi &= m g h \sin\phi - b\,\dot\phi + L\,F + \tau_d, \label{eq:planta}\\
-  \tau_m\,\dot F &= \operatorname{sat}(u) - F,\qquad 0 \le \operatorname{sat}(u) \le F_{max}, \label{eq:atuador}
+  \tau_m\,\dot F &= \operatorname{sat}(u) - F,\qquad F_{min} \le \operatorname{sat}(u) \le F_{max}, \label{eq:atuador}
 \end{align}
-em que $J$ é o momento de inércia em torno do pivô, $m$ a massa total, $h$ a altura do centro de
-massa, $L$ a altura do eixo da hélice, $b$ o atrito viscoso, $F$ o empuxo e $\tau_d$ um torque de
-perturbação. Linearizando em torno de $\phi=0$ e desprezando $\tau_m$,
+em que:
+\begin{itemize}
+  \item $J$ é o momento de inércia em torno do pivô, $m$ a massa total e $h$ a altura do centro de
+    massa;
+  \item $L$ é a altura do eixo da hélice e $b$ o atrito viscoso;
+  \item $F$ é o empuxo, positivo no sentido forte, e $\tau_d$ um torque de perturbação.
+\end{itemize}
+Linearizando em torno de $\phi=0$ e desprezando $\tau_m$,
 \begin{equation}
   G(s)=\frac{\Phi(s)}{F(s)}=\frac{L/J}{s^2+(b/J)\,s-mgh/J}.
   \label{eq:G}
@@ -311,23 +386,30 @@ Com os parâmetros da Tabela~\ref{tab:param}, os polos ficam em $-9{,}68$ e $+9{
 no semiplano direito confirma que a planta é instável em malha aberta, com constante de tempo de
 queda de cerca de 0,11~s.
 
+\textbf{Origem dos parâmetros.} Os parâmetros da haste ($m$, $h$, $L$, $J$) ainda não foram medidos
+em uma peça real. Eles foram \textbf{estimados no modelo CAD} (desenho 3D) da haste em PLA projetada
+no estudo de \textit{anti-windup}: o \textit{software} de CAD calcula a massa, o centro de massa e o
+momento de inércia a partir do volume das peças e da densidade do PLA, somados às massas dos
+componentes. Esses valores servem de base para o v2 e serão medidos na peça impressa
+(Seção~\ref{sec:proximos}). Já os parâmetros do atuador foram \textbf{medidos} no protótipo v1.
+
 \begin{table}[H]
 \centering\small
-\caption{Parâmetros do modelo. A haste é o projeto em PLA (base do v2); o atuador foi medido no v1.}
+\caption{Parâmetros do modelo.}
 \label{tab:param}
 \begin{tabular}{@{}llll@{}}
 \toprule
 \textbf{Símbolo} & \textbf{Valor} & \textbf{Descrição} & \textbf{Origem} \\
 \midrule
-$m$ & 0,145 kg & massa total & CAD \\
-$h$ & 0,069 m & altura do centro de massa & CAD \\
-$L$ & 0,212 m & altura do empuxo & CAD \\
-$J$ & $1{,}10\times10^{-3}$ kg$\cdot$m$^2$ & inércia em torno do pivô & CAD \\
-$b$ & $5\times10^{-4}$ N$\cdot$m$\cdot$s/rad & atrito viscoso & estimado \\
-$\tau_m$ & 0,03 s & constante de tempo do atuador & estimado \\
-$F_{max}$ & 0,088 N (9 gf) & empuxo máximo (90\,\% PWM) & \textbf{medido} \\
-$F_{min}$ & 0 & atuador só para frente & decisão de projeto \\
-$\phi_{bat}$ & $\pm 24^\circ$ & haste encostada no piso & CAD \\
+$m$ & 0,145 kg & massa total & estimado no CAD (PLA) \\
+$h$ & 0,069 m & altura do centro de massa & estimado no CAD (PLA) \\
+$L$ & 0,212 m & altura do empuxo & estimado no CAD (PLA) \\
+$J$ & $1{,}10\times10^{-3}$ kg$\cdot$m$^2$ & inércia em torno do pivô & estimado no CAD (PLA) \\
+$b$ & $5\times10^{-4}$ N$\cdot$m$\cdot$s/rad & atrito viscoso & estimativa típica \\
+$\tau_m$ & 0,03 s & constante de tempo do atuador & estimativa típica \\
+$F_{max}$ & 0,088 N (9 gf) & empuxo máximo, sentido forte (90\,\% PWM) & \textbf{medido no v1} \\
+$F_{min}$ & $-0{,}039$ N ($-4$ gf) & empuxo máximo, sentido reverso (90\,\% PWM) & \textbf{medido no v1} \\
+$\phi_{bat}$ & $\pm 24^\circ$ & haste encostada no piso & geometria \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -335,41 +417,54 @@ $\phi_{bat}$ & $\pm 24^\circ$ & haste encostada no piso & CAD \\
 \textbf{Ponto de operação e viabilidade.} Para manter a haste parada em $\phi_r$, a hélice deve
 fornecer o empuxo de sustentação
 \begin{equation}
-  F_h=-\frac{m g h \sin\phi_r}{L},
+  F_h=-\frac{m g h \sin\phi_r}{L}.
   \label{eq:Fh}
 \end{equation}
-que é positivo apenas para $\phi_r<0$ ($\theta_r<90^\circ$), já que o atuador só empurra em um
-sentido. O maior desvio sustentável é
+\begin{itemize}
+  \item Para $\theta_r<90^\circ$ ($\phi_r<0$), o empuxo de sustentação é positivo e vem do sentido
+    forte.
+  \item Para $\theta_r>90^\circ$, ele é negativo e vem do sentido reverso.
+\end{itemize}
+O maior desvio sustentável em cada lado é
 \begin{equation}
-  |\phi|_{max}=\arcsin\!\left(\frac{F_{max}\,L}{m g h}\right)=\arcsin\!\left(\frac{0{,}088\times0{,}212}{0{,}145\times9{,}81\times0{,}069}\right)\approx 11^\circ .
+  |\phi|_{max}=\arcsin\!\left(\frac{|F_{lim}|\,L}{m g h}\right)\;\Rightarrow\;
+  \begin{cases}
+    \arcsin\!\left(\dfrac{0{,}088\times0{,}212}{0{,}145\times9{,}81\times0{,}069}\right)\approx 11{,}0^\circ & \text{(sentido forte)},\\[10pt]
+    \arcsin\!\left(\dfrac{0{,}039\times0{,}212}{0{,}145\times9{,}81\times0{,}069}\right)\approx 4{,}9^\circ & \text{(sentido reverso)}.
+  \end{cases}
   \label{eq:phimax}
 \end{equation}
-Mesmo com a haste leve de PLA, o ventilador atual só sustenta a haste entre $79^\circ$ e $90^\circ$,
-e em $\theta_r=85^\circ$ já gasta $F_h=0{,}040$~N, 46\,\% do empuxo máximo. A expressão
-\eqref{eq:phimax} também mostra o que fazer no protótipo v2: reduzir o produto $m\,h$ (haste leve,
-com a Nucleo e o \textit{driver} fora dela e a IMU perto do pivô), aumentar $L$ (hélice no topo) e
-aumentar $F_{max}$ (\textit{driver} sem queda de tensão e, se preciso, outro motor). A haste de MDF
-do v1, com a placa embarcada, tem $m\,h$ várias vezes maior, o que explica por que ela não pôde
-ser sustentada.
+Mesmo com a haste leve de PLA, o ventilador atual só sustenta a haste entre $79^\circ$ e $94{,}9^\circ$.
+Se a haste passar desses ângulos, ela tomba.
+
+A expressão~\eqref{eq:phimax} também mostra o que fazer no protótipo v2:
+\begin{itemize}
+  \item reduzir o produto $m\,h$: haste leve, com a eletrônica fora dela e a IMU perto do pivô;
+  \item aumentar $L$: hélice no topo;
+  \item aumentar $F_{max}$ e, sobretudo, $|F_{min}|$: \textit{driver} sem queda de tensão e, se
+    preciso, outro motor ou outra hélice.
+\end{itemize}
+A haste de MDF do v1, com a placa e os cabos embarcados, tem $m\,h$ várias vezes maior. Isso explica
+por que ela não pôde ser sustentada.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\textit{Anti-windup} revisado: atuador unidirecional}
+\section{\textit{Anti-windup} revisado com o atuador medido}
 \label{sec:aw}
 
-\subsection{Por que o \textit{windup} ficou mais crítico}
+\subsection{O \textit{windup} no aeropêndulo real}
 
-No estudo de \textit{anti-windup}, o atuador era bidirecional e assimétrico
-($-0{,}10$ a $0{,}25$~N). Agora ele é unidirecional ($0$ a $0{,}088$~N). Com $\theta_r<90^\circ$, a
-hélice empurra a haste em direção à vertical e a gravidade a puxa de volta. Se a haste
-\textbf{ultrapassar a vertical}, gravidade e empuxo passam a agir no mesmo sentido, e não há força
-capaz de trazê-la de volta: ela tomba. Qualquer sobressinal que cruze $90^\circ$ é, portanto, fatal.
-É exatamente o tipo de sobressinal que o \textit{windup} da ação integral produz depois de um período
-de saturação.
+No estudo de \textit{anti-windup}, o atuador foi suposto bidirecional e assimétrico, de $-0{,}10$ a
+$0{,}25$~N. As medições confirmaram a assimetria, mas com valores bem menores: de $-0{,}039$ a
+$0{,}088$~N. O mecanismo de falha continua o mesmo, e agora com margem ainda menor:
+\begin{itemize}
+  \item se um excesso de ação integral levar a haste além de $94{,}9^\circ$, do lado em que o empuxo
+    reverso é fraco, ela tomba;
+  \item o mesmo vale do outro lado, abaixo de $79^\circ$.
+\end{itemize}
 
 A situação de saturação mais comum no uso do protótipo é a partida pelo botão B1: o usuário
-segura a haste, aperta o botão e a solta. Enquanto a mão segura a haste abaixo da referência, o
-erro é positivo, o atuador fica saturado em $F_{max}$ e o integrador acumula erro sem efeito sobre a
-saída.
+segura a haste, aperta o botão e a solta. Enquanto a mão segura a haste longe da referência, o
+atuador fica saturado e o integrador acumula erro sem efeito sobre a saída.
 
 \subsection{Integração limitada e escolha dos limites}
 
@@ -379,17 +474,22 @@ A lei de controle implementada é
   u[k]=K_p\,e[k]+I[k]-K_d\,\omega[k],
   \label{eq:il}
 \end{equation}
-em que $\omega$ é a taxa medida pelo giroscópio. Em regime, $u_{ss}=I_{ss}=F_h$. Pela regra do
-estudo de \textit{anti-windup}, os limites devem conter $F_h$ em toda a faixa de operação e ficar
-dentro da faixa do atuador, com margem $\mu=25\,\%$. Para a faixa $83^\circ\le\theta_r\le 88^\circ$,
-\eqref{eq:Fh} dá $0{,}016\le F_h\le 0{,}056$~N. Logo,
+em que $\omega$ é a taxa medida pelo giroscópio. Em regime, $u_{ss}=I_{ss}=F_h$. Pela regra do estudo
+de \textit{anti-windup}, os limites devem conter $F_h$ em toda a faixa de operação e ficar dentro da
+faixa do atuador, com margem $\mu=25\,\%$:
+\begin{itemize}
+  \item a faixa de operação adotada, $86^\circ\le\theta_r\le 93^\circ$, respeita o limite do sentido
+    reverso;
+  \item nessa faixa, \eqref{eq:Fh} dá $-0{,}024\le F_h\le 0{,}032$~N.
+\end{itemize}
+Logo,
 \begin{equation}
-  I_{max}=\min\big(F_{max},\,(1+\mu)\max F_h\big)=\min(0{,}088;\;0{,}0705)=0{,}0705~\mathrm{N},
-  \qquad I_{min}=F_{min}=0 .
+  \begin{aligned}
+  I_{max}&=\min\big(F_{max},\,(1+\mu)\max F_h\big)=\min(0{,}088;\;0{,}0404)=0{,}0404~\mathrm{N},\\
+  I_{min}&=\max\big(F_{min},\,(1+\mu)\min F_h\big)=\max(-0{,}039;\;-0{,}0303)=-0{,}0303~\mathrm{N}.
+  \end{aligned}
 \end{equation}
-O limite inferior nulo é coerente com o atuador unidirecional: um termo integral negativo só
-acumularia \textit{windup}, já que $u<0$ é cortado pela saturação. No \textit{firmware}, o trecho
-correspondente é:
+No \textit{firmware}, o trecho correspondente é:
 
 \begin{lstlisting}
 float pid_step(pidc_t *c, float theta, float rate, float dt)
@@ -397,29 +497,31 @@ float pid_step(pidc_t *c, float theta, float rate, float dt)
     float e = c->ref - theta;
     c->i = clamp(c->i + c->ki * dt * e, c->i_min, c->i_max);   /* limited integration */
     c->u = c->kp * e + c->i - c->kd * rate;                      /* D on the gyro rate  */
-    c->u_sat = clamp(c->u, c->u_min, c->u_max);                  /* u_min = 0           */
+    c->u_sat = clamp(c->u, c->u_min, c->u_max);                  /* actuator limits     */
     return c->u_sat;
 }
 \end{lstlisting}
 
 \subsection{Simulação}
 
-O modelo não linear \eqref{eq:planta}--\eqref{eq:atuador} foi simulado com o PID digital
-\eqref{eq:il} ($T_s=5$~ms). Os ganhos foram mantidos os do estudo de \textit{anti-windup}, obtidos
-por alocação de polos com $\omega_n=8$~rad/s, $\zeta=0{,}9$ e polo real em $-16$~rad/s:
-$K_p=1{,}991$~N/rad, $K_i=5{,}313$~N/(rad$\cdot$s) e $K_d=0{,}155$~N$\cdot$s/rad. A haste parte em
-equilíbrio em $\theta_r=85^\circ$. Entre 0,5 e 2,0~s, uma ``mão'', modelada como mola e amortecedor,
-segura a haste em $82^\circ$ e depois a solta. Três casos são comparados:
+\textbf{Modelo e ganhos.} O modelo não linear \eqref{eq:planta}--\eqref{eq:atuador} foi simulado com o
+PID digital \eqref{eq:il} ($T_s=5$~ms). Os ganhos foram mantidos os do estudo de
+\textit{anti-windup}, obtidos por alocação de polos com $\omega_n=8$~rad/s, $\zeta=0{,}9$ e polo real
+em $-16$~rad/s: $K_p=1{,}991$~N/rad, $K_i=5{,}313$~N/(rad$\cdot$s) e $K_d=0{,}155$~N$\cdot$s/rad.
+
+\textbf{Cenário.} A haste parte em equilíbrio em $\theta_r=88^\circ$, levemente inclinada para o
+lado do empuxo forte, como no estudo original. Entre 0,5 e 2,0~s, uma ``mão'', modelada como mola e
+amortecedor, segura a haste em $85^\circ$ e depois a solta. Três casos são comparados:
 \begin{itemize}
   \item[(a)] atuador ideal, sem saturação;
-  \item[(b)] atuador medido ($0\le F\le 0{,}088$~N), sem \textit{anti-windup};
-  \item[(c)] atuador medido, com integração limitada em $[0;\,0{,}0705]$~N.
+  \item[(b)] atuador medido ($-0{,}039\le F\le 0{,}088$~N), sem \textit{anti-windup};
+  \item[(c)] atuador medido, com integração limitada em $[-0{,}0303;\,0{,}0404]$~N.
 \end{itemize}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.86\textwidth]{fig_sim_angulo.png}
-\caption{Ângulo da haste. Faixa cinza: a mão segura a haste em $82^\circ$. Tracejado: piso ($66^\circ$ e
+\caption{Ângulo da haste. Faixa cinza: a mão segura a haste em $85^\circ$. Tracejado: piso ($66^\circ$ e
 $114^\circ$); traço-ponto: vertical.}
 \label{fig:simang}
 \end{figure}
@@ -440,9 +542,9 @@ definitivamente na faixa de $\pm1^\circ$; IAE calculado a partir da soltura.}
 \toprule
 \textbf{Caso} & $\theta_{max}$ ($^\circ$) & pico de $I$ (N) & $t_r$ (s) & IAE ($^\circ\cdot$s) & resultado \\
 \midrule
-(a) sem saturação & 92,5 & 0,223 & 0,53 & 2,0 & recupera \\
-(b) saturação, sem AW & 114,0 & 0,423 & $\infty$ & 79,4 & \textbf{tomba} \\
-(c) saturação + IL & 86,6 & 0,071 & 0,31 & 0,6 & recupera \\
+(a) sem saturação & 95,5 & 0,198 & 0,53 & 2,0 & recupera \\
+(b) saturação, sem AW & 114,0 & 0,348 & $\infty$ & 72,7 & \textbf{tomba} \\
+(c) saturação + IL & 89,2 & 0,040 & 0,22 & 0,4 & recupera \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -450,62 +552,73 @@ definitivamente na faixa de $\pm1^\circ$; IAE calculado a partir da soltura.}
 \textbf{Discussão.}
 \begin{itemize}
   \item \textbf{Sem \textit{anti-windup} (b).} Enquanto a mão segura a haste, o integrador sobe de
-    0,040 para 0,423~N, 4,8 vezes o empuxo máximo (Figura~\ref{fig:simctrl}). Ao soltar, esse excesso
-    mantém o ventilador saturado, a haste cruza a vertical e tomba.
-  \item \textbf{Com integração limitada (c).} O integrador para em 0,0705~N. A haste sobe só até
-    $86{,}6^\circ$ e volta à faixa de $\pm1^\circ$ em 0,31~s.
+    0,016 para 0,348~N, quase 4 vezes o empuxo máximo (Figura~\ref{fig:simctrl}). Ao soltar, esse
+    excesso mantém o ventilador saturado no sentido forte, e a haste ultrapassa a vertical e passa de
+    $94{,}9^\circ$. Ali o empuxo reverso de 0,039~N não basta para trazê-la de volta, e ela tomba.
+  \item \textbf{Com integração limitada (c).} O integrador para em 0,0404~N. A haste sobe só até
+    $89{,}2^\circ$, sem cruzar a vertical, e volta à faixa de $\pm1^\circ$ em 0,22~s.
   \item \textbf{Caso ideal (a).} Mesmo com atuador ilimitado, o integrador comum cresce e leva a haste
-    a $92{,}5^\circ$. No atuador real, esse sobressinal derrubaria a haste.
+    a $95{,}5^\circ$, além do limite sustentável do atuador real.
+  \item \textbf{Mão do outro lado.} Com a mão segurando a haste em $90^\circ$ (acima da referência), o
+    \textit{windup} ocorre no sentido oposto:
+    \begin{itemize}
+      \item sem \textit{anti-windup}, o integrador desce até $-0{,}191$~N e a haste tomba para
+        $66^\circ$;
+      \item com integração limitada, ela fica entre $86{,}1^\circ$ e $89{,}5^\circ$ e se recupera em
+        0,29~s.
+    \end{itemize}
   \item \textbf{Tempo segurando a haste.} Ele não altera o resultado da integração limitada: com a mão
-    segurando por 0,5, 1,5 ou 2,5~s, o caso (c) responde sempre igual ($\theta_{max}=86{,}6^\circ$,
-    $t_r=0{,}31$~s). Sem \textit{anti-windup}, o pico do integrador cresce com o tempo (0,175, 0,423 e
-    0,671~N) e a haste tomba nos três casos.
+    segurando por 0,5, 1,5 ou 2,5~s, o caso (c) responde sempre igual ($\theta_{max}=89{,}2^\circ$,
+    $t_r=0{,}22$~s). Sem \textit{anti-windup}, o pico do integrador cresce com o tempo (0,129, 0,348 e
+    0,566~N), e a haste tomba nos três casos.
 \end{itemize}
 
-\textbf{Sensibilidade ao limite superior.} A Tabela~\ref{tab:sens} e a Figura~\ref{fig:sens}
-repetem o caso (c) variando $I_{max}$.
+\textbf{Sensibilidade ao limite superior.} A Tabela~\ref{tab:sens} e a Figura~\ref{fig:sens} repetem
+o caso (c) variando $I_{max}$, com $I_{min}=-0{,}0303$~N.
 \begin{itemize}
   \item Limitar o integrador à própria faixa do atuador ($I_{max}=F_{max}$) já evita a queda, mas a
-    haste chega a $88^\circ$, perto da vertical.
-  \item Quanto mais perto de $F_h$, menor o sobressinal.
-  \item Abaixo de $F_h$ ($I_{max}=0{,}030$~N), o integrador não fornece o empuxo de sustentação, e o
-    termo proporcional passa a compensar a diferença com erro de regime ($-0{,}39^\circ$). Com ganhos
-    menores, esse erro seria maior.
+    haste chega a $92{,}7^\circ$, perto do limite de $94{,}9^\circ$.
+  \item Quanto mais perto de $F_h=0{,}016$~N, menor o sobressinal.
+  \item Abaixo de $F_h$, o integrador não fornece o empuxo de sustentação, e aparece erro de regime.
 \end{itemize}
 O critério do estudo original continua válido: $F_h\le I_{max}\le F_{max}$, o mais próximo possível
-do primeiro.
+do primeiro, com margem para cobrir a faixa de operação.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.80\textwidth]{fig_sim_sensibilidade.png}
-\caption{Ângulo da haste com integração limitada para diferentes valores de $I_{max}$ ($I_{min}=0$).}
+\caption{Ângulo da haste com integração limitada para diferentes valores de $I_{max}$ ($I_{min}=-0{,}0303$~N).}
 \label{fig:sens}
 \end{figure}
 
 \begin{table}[H]
 \centering\small
-\caption{Efeito do limite superior $I_{max}$ ($F_h=0{,}040$~N, $F_{max}=0{,}088$~N).}
+\caption{Efeito do limite superior $I_{max}$ ($F_h=0{,}016$~N, $F_{max}=0{,}088$~N).}
 \label{tab:sens}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 $I_{max}$ (N) & $\theta_{max}$ ($^\circ$) & $t_r$ (s) & erro final ($^\circ$) & resultado \\
 \midrule
-sem limite & 114,0 & $\infty$ & 29,0 & tomba \\
-0,0883 ($=F_{max}$) & 88,0 & 0,45 & 0,00 & recupera \\
-0,0705 (projeto) & 86,6 & 0,31 & 0,00 & recupera \\
-0,0550 & 85,7 & 0,11 & 0,00 & recupera \\
-0,0300 ($<F_h$) & 84,8 & 0,12 & $-0{,}39$ & erro de regime \\
+sem limite & 114,0 & $\infty$ & 26,0 & tomba \\
+0,0883 ($=F_{max}$) & 92,7 & 0,70 & 0,00 & recupera \\
+0,0404 (projeto) & 89,2 & 0,22 & 0,00 & recupera \\
+0,0250 & 88,6 & 0,07 & 0,00 & recupera \\
+0,0100 ($<F_h$) & 88,0 & 0,08 & $-0{,}23$ & erro de regime \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{Conversão para o \textit{firmware}.} O \textit{firmware} trabalha com $u$ normalizado
-(0 a 1 da razão cíclica útil, após a compensação da zona morta) e ângulos em graus. Admitindo empuxo
-aproximadamente linear em $u$ após a compensação, com $u=1\leftrightarrow F_{max}$, os valores
-acima correspondem a $K_p\approx0{,}39$/°, $K_i\approx1{,}05$/(°$\cdot$s), $K_d\approx0{,}031$/(°/s) e
-$I\in[0;\,0{,}80]$. O limite atual do \textit{firmware}, $I_{max}=0{,}40$, é menor que o
-$F_h/F_{max}=0{,}46$ necessário em $85^\circ$, e será corrigido após a identificação da curva de
-empuxo do v2.
+($-1$ a 1 da razão cíclica útil, após a compensação da zona morta) e ângulos em graus.
+\begin{itemize}
+  \item Admitindo empuxo aproximadamente linear em $u$ após a compensação, com $u=1\leftrightarrow
+    F_{max}$, os ganhos correspondem a $K_p\approx0{,}39$/°, $K_i\approx1{,}05$/(°$\cdot$s) e
+    $K_d\approx0{,}031$/(°/s).
+  \item Os limites do integrador ficam em $I\in[-0{,}34;\,0{,}46]$.
+  \item Como o sentido reverso tem menos da metade do empuxo, a conversão deve usar a curva de cada
+    sentido: na prática, um ganho maior para $u<0$. Isso será incluído após a identificação do
+    atuador do v2.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Modelo em Simulink}
@@ -520,7 +633,8 @@ O modelo \texttt{aeropendulo.slx} implementa as equações \eqref{eq:planta}, \e
   \item \textbf{Integração limitada:} os limites de saída do integrador discreto restringem o
     \textbf{estado} do integrador, que é exatamente a técnica. Com limites $\pm\infty$, obtém-se o
     caso sem \textit{anti-windup}.
-  \item \textbf{Atuador:} saturação $[F_{min},F_{max}]$ seguida da dinâmica de primeira ordem.
+  \item \textbf{Atuador:} saturação assimétrica $[F_{min},F_{max}]$ seguida da dinâmica de primeira
+    ordem.
   \item \textbf{Haste:} dois integradores; o de posição tem os batentes do piso, e sua porta de
     saturação zera a velocidade no contato.
   \item \textbf{Perturbações:} toque (pulso de torque) e mão (mola e amortecedor ativos numa janela de
@@ -534,7 +648,7 @@ O solver é de passo fixo (\texttt{ode4}, 0,5~ms).
   \node (ref) {$\phi_r$};
   \node[sumc, right=5mm of ref] (s1) {};
   \node[blk, right=of s1, minimum width=26mm] (pid) {PID discreto\\$T_s=5$ ms, IL $[I_{min},I_{max}]$};
-  \node[blk, right=of pid, minimum width=16mm] (sat) {Saturação\\$[0,F_{max}]$};
+  \node[blk, right=of pid, minimum width=16mm] (sat) {Saturação\\$[F_{min},F_{max}]$};
   \node[blk, right=of sat, minimum width=16mm] (mot) {$\dfrac{1}{\tau_m s+1}$};
   \node[sumc, right=7mm of mot] (s2) {};
   \node[blk, right=7mm of s2, minimum width=22mm] (rod) {Haste\\não linear};
@@ -557,7 +671,7 @@ O solver é de passo fixo (\texttt{ode4}, 0,5~ms).
 \label{fig:simulink}
 \end{figure}
 
-Os arquivos da pasta \texttt{simulacao} são:
+Os arquivos ficam na pasta \texttt{simulacao} do repositório:
 \begin{itemize}
   \item \texttt{parametros\_aeropendulo.m}: parâmetros do modelo, do atuador e do controlador;
   \item \texttt{cria\_modelo\_aeropendulo.m}: gera o \texttt{aeropendulo.slx};
@@ -583,14 +697,14 @@ as metas preliminares da ideação.
 \toprule
 \textbf{Requisito} & \textbf{Meta} \\
 \midrule
-Faixa de referência & $83^\circ \le \theta_r \le 88^\circ$, definida pela serial ou pelo botão B1 \\
+Faixa de referência & $86^\circ \le \theta_r \le 93^\circ$, dos dois lados da vertical, definida pela serial ou pelo botão B1 \\
 Erro em regime & $|e_{ss}| \le 1^\circ$ \\
-Segurança & a haste \textbf{nunca} deve ultrapassar $90^\circ$ (não há empuxo para recuperá-la) \\
+Segurança & a haste não deve sair da região sustentável pelo atuador ($79^\circ$ a $94{,}9^\circ$ com o ventilador atual) \\
 Sobressinal & $\le 3^\circ$ após degrau de referência, toque ou soltura pela mão \\
 Acomodação & entrada definitiva na faixa de $\pm2^\circ$ em menos de 1,5~s \\
 Rejeição de perturbação & recuperar toques de até 0,005~N$\cdot$m durante 0,2~s sem tombar \\
-\textit{Anti-windup} & integração limitada com $F_h \le I_{max} \le F_{max}$ e $I_{min}=0$; comparar com e sem a técnica \\
-Atuador & razão cíclica $\le 90\,\%$, sem inversão, \textit{driver} sem aquecimento excessivo \\
+\textit{Anti-windup} & integração limitada com $\max F_h \le I_{max} \le F_{max}$ e $F_{min} \le I_{min} \le \min F_h$; comparar com e sem a técnica \\
+Atuador & bidirecional, com inversões bruscas de sentido e intensidade sem aquecimento excessivo do \textit{driver} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -599,31 +713,33 @@ Atuador & razão cíclica $\le 90\,\%$, sem inversão, \textit{driver} sem aquec
 \section{Próximos passos e cronograma}
 \label{sec:proximos}
 
-\textbf{Atuador.}
+\textbf{Atuador (\textit{driver} e motor).}
 \begin{itemize}
-  \item Substituir o L9110H por um MOSFET canal N de nível lógico (por exemplo, módulo AOD4184,
-    AO3400 ou IRLZ44N), com diodo de roda livre. Como o atuador agora é unidirecional, a ponte H é
-    desnecessária. O MOSFET elimina a queda de tensão e o aquecimento, e deve aumentar o empuxo.
-  \item Avaliar outro motor ou outra hélice, por exemplo um motor sem núcleo 8520 com hélice de
-    55--75~mm, como no projeto em PLA, se o empuxo continuar insuficiente pela
-    equação~\eqref{eq:phimax}.
+  \item \textbf{\textit{Driver}:} trocar o L9110H por uma ponte H com MOSFETs, por exemplo o
+    TB6612FNG (1,2~A contínuos, 3,2~A de pico) ou o DRV8871 (3,6~A de pico). Elas têm queda de
+    tensão desprezível e suportam as inversões bruscas de sentido e intensidade exigidas pelo
+    controle bidirecional.
+  \item \textbf{Motor e hélice:} se o empuxo continuar insuficiente pela equação~\eqref{eq:phimax},
+    trocar o motor (por exemplo, um motor sem núcleo 8520) e/ou a hélice. Uma hélice de passo
+    simétrico, impressa em 3D, reduziria a diferença entre os dois sentidos.
 \end{itemize}
 
-\textbf{Estrutura (v2).}
+\textbf{Estrutura (v2, Figura~\ref{fig:v2}).}
 \begin{itemize}
-  \item Haste leve em plástico ou impressa em 3D, com só a IMU e o ventilador embarcados.
-  \item IMU perto do pivô: menos aceleração tangencial e vibração no acelerômetro, e menor braço de
-    alavanca dos fios.
-  \item Fios finos e flexíveis saindo pela altura do pivô, ao longo do eixo de giro.
-  \item Nucleo, \textit{driver} e fonte fora da haste.
+  \item Haste leve em PLA impresso, só com a IMU, perto do pivô, e o ventilador no topo.
+  \item Nucleo, \textit{driver} e fonte fora da haste, ligados por um fio fino e leve que sai na
+    altura do pivô, ao longo do eixo de giro.
+  \item O cabo USB deixa de ficar preso à haste.
 \end{itemize}
 
 \textbf{Identificação, sintonia e ensaios.}
 \begin{itemize}
-  \item Medir $m$, $h$ e $L$, e obter $J$ pelo período de oscilação da haste pendurada como pêndulo
-    simples.
-  \item Medir de novo a curva de empuxo e a constante $\tau_m$ (degrau de PWM).
-  \item Atualizar o modelo e o Simulink, e ajustar os ganhos na ordem $K_p\rightarrow K_d\rightarrow K_i$.
+  \item Medir $m$, $h$ e $L$ na peça impressa, e obter $J$ pelo período de oscilação da haste
+    pendurada como pêndulo simples.
+  \item Medir as curvas de empuxo nos dois sentidos com o novo atuador, e a constante $\tau_m$
+    (degrau de PWM).
+  \item Atualizar o modelo, o Simulink e os limites da integração limitada, e ajustar os ganhos na
+    ordem $K_p\rightarrow K_d\rightarrow K_i$.
   \item Comparar experimentalmente o controle com e sem integração limitada, na partida pelo botão
     e no toque.
 \end{itemize}
@@ -636,10 +752,10 @@ Atuador & razão cíclica $\le 90\,\%$, sem inversão, \textit{driver} sem aquec
 \toprule
 \textbf{Período} & \textbf{Atividade} \\
 \midrule
-11/11 & TP2: apresentação do protótipo v1 e este relatório parcial \\
-12/11 -- 18/11 & compra e montagem do MOSFET; nova curva de empuxo; escolha do motor \\
-16/11 -- 22/11 & impressão e montagem da estrutura v2 (fiação externa) \\
-23/11 -- 29/11 & identificação ($m$, $h$, $L$, $J$, $\tau_m$, curva de empuxo); atualização do modelo \\
+11/11 & TP2: apresentação do protótipo v1 (funcional nos dois sentidos, sem se sustentar) \\
+17/11 -- 23/11 & escolha e compra do \textit{driver} e/ou motor; novas curvas de empuxo \\
+18/11 -- 25/11 & impressão e montagem da estrutura v2 (fiação externa fina) \\
+24/11 -- 30/11 & identificação ($m$, $h$, $L$, $J$, $\tau_m$, curvas de empuxo); atualização do modelo \\
 30/11 -- 06/12 & sintonia do PID; ensaios com e sem \textit{anti-windup}; métricas no aplicativo \\
 07/12 -- 11/12 & TP3: relatório final (prazo 11/12) \\
 14/12 ou 16/12 & TP4: apresentação, teste de funcionamento e arguição \\
@@ -652,15 +768,21 @@ Atuador & razão cíclica $\le 90\,\%$, sem inversão, \textit{driver} sem aquec
 
 \begin{itemize}
   \item \textbf{O que foi validado.} O protótipo v1 validou o sensor, o \textit{firmware}, o
-    acionamento e as ferramentas de ensaio. O sistema está pronto para receber a nova mecânica.
-  \item \textbf{O que impediu o equilíbrio.} Os ensaios mostraram que o equilíbrio depende de uma
-    relação favorável entre empuxo e torque da gravidade, que o v1 não atendia.
-  \item \textbf{Mudanças de projeto.} Os ensaios levaram a dois redesenhos: atuador unidirecional,
-    operando abaixo da vertical, e estrutura leve com a eletrônica fora da haste.
-  \item \textbf{\textit{Anti-windup}.} Com o atuador unidirecional, ultrapassar a vertical é fatal, e
-    a partida pelo botão satura o atuador. Nessas condições, a integração limitada passa a ser
-    \textbf{necessária para a operação}, e não só uma melhoria de desempenho: na simulação, ela evita
-    a queda após a haste ser solta, com sobressinal de $1{,}6^\circ$ e recuperação em 0,31~s.
+    acionamento nos dois sentidos e as ferramentas de ensaio. O controle reage corretamente à
+    inclinação para os dois lados.
+  \item \textbf{O que impediu o equilíbrio.} A haste não se sustenta porque o torque da gravidade da
+    estrutura pesada, somado à perturbação do cabo USB, supera o pouco empuxo disponível. O
+    aquecimento do L9110H limitou ainda mais os ensaios.
+  \item \textbf{Mudanças de projeto.} As mudanças para o v2 atacam essas causas diretamente:
+    \begin{itemize}
+      \item estrutura leve só com a IMU e o ventilador;
+      \item eletrônica fora da haste, ligada por fio fino;
+      \item \textit{driver} e motor capazes de inversões bruscas.
+    \end{itemize}
+  \item \textbf{\textit{Anti-windup}.} A simulação com o atuador medido confirma o papel da integração
+    limitada. Na partida pelo botão, que satura o atuador, o integrador sem proteção leva a haste além
+    do limite do empuxo reverso, e ela tomba. Com a integração limitada, ela se recupera nos dois
+    sentidos, com sobressinal de $1{,}2^\circ$ e recuperação em 0,22~s.
 \end{itemize}
 
 \begin{thebibliography}{9}\small
@@ -671,6 +793,7 @@ Atuador & razão cíclica $\le 90\,\%$, sem inversão, \textit{driver} sem aquec
 \bibitem{equipe} D. B. N. Buente, J. P. P. A. Santos, ``\textit{Anti-windup} por integração limitada aplicado ao controle de ângulo de um aeropêndulo'', trabalho AS, ENGC54, UFBA, 2026.
 \bibitem{st} STMicroelectronics, \textit{UM1724 -- STM32 Nucleo-64 boards user manual}.
 \bibitem{mpu} InvenSense, \textit{MPU-9250 Product Specification}, rev. 1.1, 2016.
+\bibitem{repo} J. P. Penelu, D. Buente, \textit{Repositório do projeto AeroPêndulo}. Disponível em: \repo.
 \end{thebibliography}
 
 \end{document}

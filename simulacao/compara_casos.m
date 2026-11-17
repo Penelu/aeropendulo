@@ -79,13 +79,13 @@ subplot(2, 1, 2); hold on; box on; grid on;
 for i = 2:3
     plot(res{i}.t, res{i}.I, 'color', colors{i}, 'linewidth', 1.4);
 end
-plot([0 p.Tend], [p.Imax p.Imax], 'k:', [0 p.Tend], [Fh Fh], 'k-.');
-ylim([0 0.5]); xlim([0 p.Tend]); xlabel('t (s)'); ylabel('I (N)');
-legend({names{2:3}, 'I_{max}', 'F_h'}, 'location', 'northeast');
+plot([0 p.Tend NaN 0 p.Tend], [p.Imax p.Imax NaN p.Imin p.Imin], 'k:', [0 p.Tend], [Fh Fh], 'k-.');
+ylim([-0.1 0.5]); xlim([0 p.Tend]); xlabel('t (s)'); ylabel('I (N)');
+legend({names{2:3}, 'I_{max}, I_{min}', 'F_h'}, 'location', 'northeast');
 print(f, fullfile(outdir, 'fig_sim_controle.png'), '-dpng', '-r200'); close(f);
 
 % ---- sensitivity to the upper integrator bound
-imax = [Inf p.Fmax p.Imax 0.055 0.030];
+imax = [Inf p.Fmax p.Imax 0.025 0.010];
 fprintf('\n%-10s %8s %8s %8s %8s\n', 'Imax(N)', 'thmax', 'tr(s)', 'erro', 'tombou');
 f = figure('visible', 'off', 'position', [100 100 760 330]);
 hold on; box on; grid on;
@@ -112,4 +112,11 @@ for dur = [0.5 1.5 2.5]
     st = 'ok'; if mb.fell, st = 'tomba'; end
     fprintf('%-10.1f %10.3f %10s %10.1f %10.2f\n', dur, mb.Ipk, st, mc.thmax, mc.tr);
 end
+% ---- hand on the other side (above the reference): windup towards the weak reverse thrust
+q = p;  q.hold_theta = p.theta_r + 2;
+ob = simula_aeropendulo(q, cases{2});  mb = metrics(ob, q);
+oc = simula_aeropendulo(q, cases{3});  mc = metrics(oc, q);
+after = oc.t >= q.hold_t1;
+fprintf('\nMao em %.0f graus (acima da ref.): sem AW Imin %.3f N, tombou %d (theta min %.1f) | IL theta [%.1f %.1f], tr %.2f s\n', ...
+        q.hold_theta, min(ob.I), mb.fell, min(ob.theta), min(oc.theta(after)), max(oc.theta(after)), mc.tr);
 fprintf('\nFiguras salvas em %s\n', outdir);

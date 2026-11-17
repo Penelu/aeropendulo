@@ -1,6 +1,6 @@
 # Simulação do aeropêndulo
 
-Modelo não linear da haste, ventilador só para frente com o empuxo medido (0,088 N) e PID digital com integração limitada (*anti-windup*). Os parâmetros ficam todos em `parametros_aeropendulo.m`.
+Modelo não linear da haste, ventilador bidirecional com o empuxo medido (0,088 N no sentido forte, 0,039 N no reverso) e PID digital com integração limitada (*anti-windup*). Os parâmetros ficam todos em `parametros_aeropendulo.m`.
 
 ## No computador da UFBA (MATLAB + Simulink)
 
@@ -13,7 +13,7 @@ Modelo não linear da haste, ventilador só para frente com o empuxo medido (0,0
 
 Resultado esperado: a diferença para o script fica em décimos de grau, e os casos batem com a Tabela 5 do relatório.
 - (b) tomba em 114°.
-- (c) chega a no máximo 86,6° e volta à referência.
+- (c) chega a no máximo 89,2° e volta à referência.
 
 > O `cria_modelo_aeropendulo.m` foi escrito sem acesso a uma licença do Simulink, porque a licença de rede da UFBA não estava disponível. Se algum parâmetro de bloco der erro, a mensagem do MATLAB indica o bloco. As equações estão no cabeçalho do script.
 

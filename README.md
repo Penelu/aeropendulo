@@ -2,7 +2,19 @@
 
 Haste com duas pontas arredondadas na base (tomba em um só eixo), ventilador QYF-749 (ponte H L9110H) o mais alto possível e IMU MPU-9250 (acelerômetro + giroscópio). Controle PID com integração limitada (*anti-windup*), como no artigo.
 
-**Estado atual (TP2, 11/11/2026):** protótipo v1 (haste de MDF) construído e ensaiado. O ventilador opera **só para frente** (`ulim 0 1`, teto `dmax 90`), com a haste inclinada abaixo da vertical (referência padrão de 85°). O equilíbrio ainda não foi obtido: o empuxo medido (9 gf) é baixo para a haste pesada, e o L9110H aquece. Os próximos passos são trocar o *driver* por um MOSFET e fazer uma haste leve (v2). Veja o relatório parcial em `relatorio/` e o diário de ensaios em `docs/relatorio_testes.md`.
+**Estado atual (TP2):** o protótipo v1 (haste de MDF com a Nucleo e os fios embarcados) foi apresentado como **funcional nos dois sentidos**: o ventilador reage contra a inclinação para os dois lados. Ele **não se sustenta sozinho**, por três motivos:
+- o peso da estrutura e dos fios, principalmente o cabo USB;
+- o empuxo baixo: 9 gf no sentido forte e 4 gf no reverso;
+- o aquecimento do L9110H nas inversões.
+
+Os próximos passos (protótipo v2):
+- trocar o *driver* por uma ponte H com MOSFETs e, se preciso, o motor;
+- fazer uma haste leve de PLA só com a IMU e o ventilador;
+- deixar o resto fora da haste, ligado por um fio fino.
+
+O padrão do firmware é o modo só para frente (`ulim 0 1`), que poupa o L9110H. Para os dois sentidos, envie `ulim -1 1` e `ilim -0.4 0.8` pela serial.
+
+Veja o relatório parcial em `relatorio/` e o diário de ensaios em `docs/relatorio_testes.md`.
 
 ```
 aeropendulo/

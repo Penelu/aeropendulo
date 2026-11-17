@@ -436,6 +436,32 @@ Isso aumenta o torque da gravidade (m·g·d_CG) e o momento de inércia. Junto c
 - Cada estado foi recompilado sem avisos, e o tamanho de flash bate com o medido em cada etapa real (42 740 → 43 096 → 43 096 → 43 552 → 43 552 → 43 688 B).
 - As datas dos commits são as de hoje; a data real de cada mudança está na mensagem do commit.
 
+## 3.1 — Revisão do relatório e publicação (2026-11-17)
+
+**Decisões do usuário**
+- **O atuador continua bidirecional.** O modo "só para frente" foi uma medida temporária para poupar o L9110H. O *driver* e/ou o motor serão trocados por componentes que suportem inversões bruscas de sentido e intensidade. Uma ponte H com MOSFETs, como o TB6612FNG ou o DRV8871, substitui a ideia de um MOSFET único, que só serve para um sentido.
+- **Estrutura v2:** haste leve de PLA só com a IMU e o ventilador. O resto fica ligado por um fio fino e o mais leve possível.
+- **Entrega do TP2:** o protótipo v1 foi apresentado como funcional nos dois sentidos (com `ulim -1 1` e `ilim -0.4 0.8` enviados pela serial), mas sem conseguir se sustentar, por causa do peso e dos fios, principalmente o cabo USB da Nucleo.
+
+**Simulação refeita com o atuador bidirecional medido** (F de −0,039 a +0,088 N)
+- Ângulos máximos sustentáveis: 11,0° no sentido forte e 4,9° no reverso. A haste só se sustenta entre 79° e 94,9°.
+- Faixa de operação adotada: 86° a 93°. Integração limitada em [−0,0303; 0,0404] N.
+- Cenário: θ_r = 88°, com a mão segurando a haste em 85° de 0,5 a 2,0 s.
+
+  | Caso | θ máx. | Pico de I | Resultado |
+  |---|---|---|---|
+  | Sem anti-windup | 114° | 0,348 N | tomba |
+  | Integração limitada | 89,2° | — | recupera em 0,22 s |
+
+- Com a mão do outro lado (90°): sem anti-windup, a haste tomba para 66°; com integração limitada, recupera em 0,29 s.
+- Com θ_r = 90°, segurar a haste 3° abaixo da referência e soltar derruba até o caso com integração limitada. É o limite do empuxo reverso, não *windup*.
+
+**Relatório**
+- Nova figura do conceito do v2: `relatorio/figuras/prototipo_v2.png`, gerada por `gera_prototipo_v2.py`.
+- O CAD antigo, com a Nucleo presa na haste, foi removido.
+- A tabela de parâmetros agora diz "estimado no CAD (PLA)": massa, CG e inércia calculados pelo *software* de CAD do projeto em PLA do artigo, ainda não medidos numa peça real.
+- O link do repositório está no cabeçalho: https://github.com/Penelu/aeropendulo.
+
 ---
 
 ## Registros automáticos
